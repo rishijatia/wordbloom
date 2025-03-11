@@ -68,4 +68,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgments
 
-- Thanks to all contributors who have helped shape WordBloom
+- Thanks to all AI contributors who have helped shape WordBloom
