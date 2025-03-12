@@ -6,6 +6,7 @@ import { theme } from './styles/theme';
 import StartScreen from './components/screens/StartScreen/StartScreen';
 import GameScreen from './components/screens/GameScreen/GameScreen';
 import GameOverScreen from './components/screens/GameOverScreen/GameOverScreen';
+import NotificationManager from './components/game/Notification/NotificationManager';
 
 const AppContainer = styled.div`
   width: 100%;
@@ -36,6 +37,7 @@ const App: React.FC = () => {
         <AppContainer>
           <GameContent />
         </AppContainer>
+        <NotificationManager />
       </GameProvider>
     </ThemeProvider>
   );

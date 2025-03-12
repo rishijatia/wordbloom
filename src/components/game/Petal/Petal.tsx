@@ -27,22 +27,22 @@ const getSizeByTier = (tier: PetalTier, index: number): string => {
   }
 };
 
-// Background color based on tier and position - using our new color scheme
-const getColorByTier = (tier: PetalTier, index: number): string => {
+// Background color based on tier and position
+const getColorByTier = (tier: PetalTier, index: number, theme: any): string => {
   switch (tier) {
-    case 1: return '#ffcc29'; // Bright yellow for center (Tier 1)
-    case 2: return '#4ecdc4'; // Light teal for inner ring (Tier 2)
-    case 3: return '#a893db'; // Light lavender for outer ring (Tier 3)
+    case 1: return theme.colors.centerPetal; // Golden yellow for center (Tier 1)
+    case 2: return theme.colors.innerPetal; // Teal mint for inner ring (Tier 2)
+    case 3: return theme.colors.outerPetal; // Soft purple for outer ring (Tier 3)
     default: return '#ffffff';
   }
 };
 
-// Selected color by tier - brighter versions of our color scheme
-const getSelectedColorByTier = (tier: PetalTier, index: number): string => {
+// Selected color by tier - more vibrant versions for better visual distinction
+const getSelectedColorByTier = (tier: PetalTier, index: number, theme: any): string => {
   switch (tier) {
-    case 1: return '#ffdd55'; // Brighter yellow for center
-    case 2: return '#60ede4'; // Brighter teal for inner ring
-    case 3: return '#bda8f0'; // Brighter lavender for outer ring
+    case 1: return theme.colors.selectedCenterPetal; // Brighter golden for center
+    case 2: return theme.colors.selectedInnerPetal; // Brighter teal for inner ring
+    case 3: return theme.colors.selectedOuterPetal; // Brighter purple for outer ring
     default: return '#ffffff';
   }
 };
@@ -74,17 +74,17 @@ const HexagonalPetal = styled.div<{
   width: ${props => getSizeByTier(props.$tier, props.$index)};
   height: calc(${props => getSizeByTier(props.$tier, props.$index)} * 0.866); /* Hexagon height ratio */
   background-color: ${props => props.$isSelected 
-    ? getSelectedColorByTier(props.$tier, props.$index)
-    : getColorByTier(props.$tier, props.$index)};
+    ? getSelectedColorByTier(props.$tier, props.$index, props.theme)
+    : getColorByTier(props.$tier, props.$index, props.theme)};
   clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
   font-weight: bold;
   font-size: ${props => getFontSizeByTier(props.$tier, props.$index)};
-  color: #333;
+  color: ${props => props.theme.colors.text};
   cursor: pointer;
   user-select: none;
   box-shadow: ${props => props.$isSelected 
-    ? '0 0 8px rgba(0, 0, 0, 0.4)' 
-    : '0 2px 4px rgba(0, 0, 0, 0.1)'};
+    ? props.theme.shadows.medium
+    : props.theme.shadows.small};
   transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
   z-index: ${props => props.$isSelected 
     ? 10
@@ -96,22 +96,33 @@ const HexagonalPetal = styled.div<{
   
   /* Visual effects based on state */
   transform: ${props => props.$isSelected 
-    ? 'scale(1.05)' 
+    ? 'scale(1.08)' 
     : props.$isHighlighted
-      ? 'scale(1.02)'
+      ? 'scale(1.04)'
       : 'scale(1)'};
   
-  /* Border for selected state */
-  border: ${props => props.$isSelected ? '2px solid #333' : 'none'};
+  /* Highlight for selected state - solid color instead of border */
+  border: none;
   
-  /* Next typing candidate styling */
-  outline: ${props => props.$isNextTypingCandidate ? '2px dashed #333' : 'none'};
+  /* Next typing candidate styling - subtle glow */
+  ${props => props.$isNextTypingCandidate && `
+    box-shadow: 0 0 10px ${props.theme.colors.accent};
+  `}
+  outline: none;
   
   /* Neighbor styling */
   ${props => props.$isNeighbor && !props.$isSelected && `
-    background-color: ${getColorByTier(props.$tier, props.$index)}; 
-    box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+    background-color: ${getColorByTier(props.$tier, props.$index, props.theme)}; 
+    box-shadow: 0 0 8px ${props.theme.colors.activeConnection};
   `}
+  
+  /* Add subtle pulse animation on hover */
+  &:hover {
+    transform: ${props => props.$isSelected ? 'scale(1.08)' : 'scale(1.04)'};
+    box-shadow: ${props => props.$isSelected 
+      ? `0 0 12px ${props.theme.colors.shadow}`
+      : `0 0 8px ${props.theme.colors.shadow}`};
+  }
 `;
 
 const Petal: React.FC<PetalProps> = ({

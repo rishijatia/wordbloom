@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { useGameContext } from '../../../contexts/GameContext';
 import { PetalState, PetalTier } from '../../../models/Petal';
 import { calculateFlowerLayout } from '../../../utils/layout';
@@ -18,6 +18,32 @@ const GameWrapper = styled.div`
   }
 `;
 
+const flyUpAndFadeAnimation = keyframes`
+  0% { transform: translate(-50%, 0); opacity: 0; scale: 0.7; }
+  20% { transform: translate(-50%, -20px); opacity: 1; scale: 1.1; }
+  80% { transform: translate(-50%, -80px); opacity: 1; scale: 1; }
+  100% { transform: translate(-50%, -120px); opacity: 0; scale: 0.9; }
+`;
+
+const WordScoreAnimation = styled.div<{ $x: number; $y: number; $score: number }>`
+  position: absolute;
+  left: ${props => props.$x}%;
+  top: ${props => props.$y}%;
+  transform: translateX(-50%);
+  color: ${props => {
+    if (props.$score > 30) return props.theme.colors.accent;
+    if (props.$score > 20) return props.theme.colors.warning;
+    return props.theme.colors.success;
+  }};
+  font-weight: bold;
+  font-size: ${props => props.$score > 20 ? '2.2rem' : '1.8rem'};
+  animation: ${flyUpAndFadeAnimation} 1.5s ease-out forwards;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+  z-index: 1000;
+  white-space: nowrap;
+  pointer-events: none;
+`;
+
 const FlowerContainer = styled.div`
   position: relative;
   width: 100%;
@@ -27,18 +53,18 @@ const FlowerContainer = styled.div`
   border-radius: 50%;
   touch-action: none;
   margin: 0 auto;
-  max-width: 500px;
+  max-width: 550px;
   
   @media (max-width: 768px) {
-    width: 85vw;
-    height: 85vw;
-    padding-bottom: 85vw;
+    width: 90vw;
+    height: 90vw;
+    padding-bottom: 90vw;
     max-width: none;
   }
   
   &:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.5);
+    box-shadow: 0 0 0 4px ${props => `${props.theme.colors.activeConnection}50`};
   }
 `;
 
@@ -91,7 +117,7 @@ const WordChip = styled.div`
 `;
 
 const Flower: React.FC = () => {
-  const { state, selectPetal, resetSelection, submitWord } = useGameContext();
+  const { state, selectPetal, resetSelection, submitWord, clearInvalidWordState } = useGameContext();
   const { letterArrangement, selectedPetals, gameStatus, foundWords, score, timeRemaining, currentWord } = state;
   
   const [petals, setPetals] = useState<PetalState[]>([]);
@@ -102,6 +128,11 @@ const Flower: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const updateRequiredRef = useRef<boolean>(false);
   const isDraggingRef = useRef(false);
+  
+  // For word score animation
+  const [wordScore, setWordScore] = useState(0);
+  const [showWordScore, setShowWordScore] = useState(false);
+  const [wordScorePosition, setWordScorePosition] = useState({ x: 0, y: 0 });
   
   // Calculate timer progress percentage
   const timerProgress = (timeRemaining / 120) * 100; // Assuming GAME_TIME is 120 seconds
@@ -430,29 +461,39 @@ const Flower: React.FC = () => {
       event.preventDefault();
       event.stopPropagation();
       
+      // End the dragging state
       setIsDragging(false);
+      isDraggingRef.current = false;
       
       // Remove document-level event listeners
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       
-      // Automatic submit/reset logic
-      if (state.currentWord.length >= 3) {
-        submitWord();
-      } else {
+      // Don't submit invalid words (too short)
+      if (state.currentWord.length < 3) {
         resetSelection();
+        return;
       }
+      
+      // Don't try to submit again if we already have an invalid attempt
+      if (state.invalidWordAttempt) {
+        // Let the WordDisplay component handle the reset
+        return;
+      }
+
+      // Submit the word if it's long enough
+      submitWord();
     }
-  }, [isDragging, state.currentWord.length, submitWord, resetSelection]);
+  }, [isDragging, state.currentWord.length, state.invalidWordAttempt, submitWord, resetSelection, handleMouseMove]);
   
-  // Update handleTouchMove to use isDraggingRef
+  // Update handleTouchMove to use isDraggingRef - without preventDefault
   const handleTouchMove = useCallback((event: React.TouchEvent) => {
-    if (!isDraggingRef.current) return;
+    if (!isDraggingRef.current) {
+      return;
+    }
     
-    // Prevent default to stop page scrolling during the drag
-    event.preventDefault();
-    
-    // Process touch position
+    // Do NOT call preventDefault here - only use it in the non-passive native event listener
+    // Process touch position only
     if (event.touches.length > 0) {
       const touch = event.touches[0];
       processPetalAtPoint(touch.clientX, touch.clientY);
@@ -463,11 +504,14 @@ const Flower: React.FC = () => {
   const handleTouchStart = (event: React.TouchEvent) => {
     if (gameStatus !== 'playing') return;
     
+    console.log('Touch start detected');
+    
     // Reset previous selection
     resetSelection();
     
     // Set dragging state
     setIsDragging(true);
+    isDraggingRef.current = true;
     
     // Process the first touch
     if (event.touches.length > 0) {
@@ -476,16 +520,58 @@ const Flower: React.FC = () => {
     }
   };
   
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (event: React.TouchEvent) => {
+    // No longer calling preventDefault to avoid passive event listener warning
+    
+    console.log('Touch end detected, isDragging:', isDragging, 'word:', state.currentWord, 'invalid:', state.invalidWordAttempt);
+    
+    // Check if we're in a dragging state
     if (isDragging) {
+      // End the dragging state
       setIsDragging(false);
+      isDraggingRef.current = false;
       
-      // Automatic submit/reset logic
-      if (state.currentWord.length >= 3) {
-        submitWord();
-      } else {
+      // Don't submit invalid words (too short)
+      if (state.currentWord.length < 3) {
+        console.log('Word too short, resetting');
         resetSelection();
+        return;
       }
+      
+      // If we already have an invalid attempt, just let the WordDisplay handle it
+      if (state.invalidWordAttempt) {
+        console.log('Invalid word attempt already in progress, not submitting again');
+        return;
+      }
+
+      // Submit the word if it's long enough
+      console.log('Submitting word:', state.currentWord);
+      submitWord();
+      
+      // When handling touch end on invalid words, we need to force a reset after
+      // a short delay to account for state updates
+      if (state.invalidWordAttempt) {
+        console.log('Word invalid after submission, will reset');
+        setTimeout(() => {
+          resetSelection();
+        }, 200);
+      }
+    } else {
+      console.log('Touch end ignored - not dragging');
+    }
+  };
+  
+  // Handle touch cancel - important for some devices
+  const handleTouchCancel = (event: React.TouchEvent) => {
+    console.log('Touch cancel detected');
+    
+    if (isDragging) {
+      // End dragging state
+      setIsDragging(false);
+      isDraggingRef.current = false;
+      
+      // Always reset on touch cancel for safety
+      resetSelection();
     }
   };
   
@@ -535,6 +621,9 @@ const Flower: React.FC = () => {
     const container = containerRef.current;
     const touchMoveHandler = (event: TouchEvent) => {
       if (!isDraggingRef.current) return;
+      
+      // We need preventDefault to stop scrolling while dragging
+      // This is why we must use a non-passive event listener
       event.preventDefault();
       
       if (event.touches.length > 0) {
@@ -543,7 +632,8 @@ const Flower: React.FC = () => {
       }
     };
 
-    // Add non-passive touch event listeners
+    // Add non-passive touch event listener for touchmove
+    // The {passive: false} option is critical here to allow preventDefault
     container.addEventListener('touchmove', touchMoveHandler, { passive: false });
 
     return () => {
@@ -551,10 +641,89 @@ const Flower: React.FC = () => {
     };
   }, [processPetalAtPoint]);
   
-  // Add isDraggingRef update effect
+  // Keep isDraggingRef in sync with state
   useEffect(() => {
     isDraggingRef.current = isDragging;
   }, [isDragging]);
+  
+  // Track the invalid word attempt state - critical for reset handling
+  useEffect(() => {
+    if (state.invalidWordAttempt) {
+      console.log('Invalid word detected in Flower component');
+      
+      // Force the dragging state to false immediately
+      setIsDragging(false);
+      isDraggingRef.current = false;
+    }
+  }, [state.invalidWordAttempt]);
+  
+  // Track score changes to display word score at the last selected petal position
+  useEffect(() => {
+    // Only show animation for valid words that earn points
+    if (state.lastWordScore && state.lastWordScore > 0) {
+      // Get position from the display container rather than from selectedPetals 
+      // (which will be empty after word submission)
+      const displayContainer = document.querySelector('#word-display-container');
+      if (displayContainer) {
+        const rect = displayContainer.getBoundingClientRect();
+        const containerRect = containerRef.current?.getBoundingClientRect();
+        
+        if (containerRect) {
+          // Calculate position relative to the flower container
+          const x = ((rect.left + rect.width/2) - containerRect.left) / containerRect.width * 100;
+          const y = (rect.bottom - containerRect.top) / containerRect.height * 100;
+          
+          setWordScore(state.lastWordScore);
+          setWordScorePosition({ x, y });
+          setShowWordScore(true);
+          
+          // Hide animation after it completes
+          const timer = setTimeout(() => {
+            setShowWordScore(false);
+          }, 1500);
+          
+          return () => clearTimeout(timer);
+        }
+      }
+    }
+  }, [state.lastWordScore, containerRef]);
+  
+  // Debugging - force a reset of the invalid state when word is detected
+  useEffect(() => {
+    if (state.invalidWordAttempt) {
+      console.log('*** INVALID WORD DETECTED - WILL RESET STATE AFTER 500ms ***');
+      
+      const timer = setTimeout(() => {
+        console.log('*** RESETTING SELECTION FROM FLOWER COMPONENT ***');
+        resetSelection();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [state.invalidWordAttempt, resetSelection]);
+
+  // Set up a safety mechanism to ensure we can always recover from a stuck state
+  // This ensures we have a backup way to reset if something goes wrong
+  useEffect(() => {
+    if (!state.invalidWordAttempt) return; // Only run when invalid word is detected
+    
+    // If an invalid word state persists too long, force a reset
+    console.log('Setting up safety timeout for invalid word');
+    
+    // We only want one safety timer at a time
+    const safetyTimer = setTimeout(() => {
+      if (state.invalidWordAttempt) {
+        console.log('SAFETY: Forcing reset of stuck word state');
+        resetSelection();
+        clearInvalidWordState();
+      }
+    }, 3000); // 3 seconds should be plenty
+    
+    return () => {
+      // Always clear the timeout when the effect is cleaned up
+      clearTimeout(safetyTimer);
+    };
+  }, [state.invalidWordAttempt]); // Only depend on invalidWordAttempt, not the functions
   
   return (
     <GameWrapper>
@@ -562,19 +731,30 @@ const Flower: React.FC = () => {
         ref={containerRef}
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
         onFocus={handleFocus}
         onBlur={handleBlur}
         tabIndex={0}
         style={{ userSelect: 'none' }}
       >
+        {showWordScore && (
+          <WordScoreAnimation 
+            $x={wordScorePosition.x}
+            $y={wordScorePosition.y}
+            $score={wordScore}
+          >
+            +{wordScore}
+          </WordScoreAnimation>
+        )}
         {petals.map((petal, index) => {
           const x = petal.position.x;
           const y = petal.position.y;
           
           return (
             <Petal
-              key={index}
+              key={`petal-${petal.tier}-${petal.index}`}
               letter={petal.letter}
               tier={petal.tier}
               index={petal.index}
@@ -605,7 +785,7 @@ const Flower: React.FC = () => {
         <FoundWordsHeader>Found Words</FoundWordsHeader>
         <FoundWordsDisplay>
           {foundWords.map((word, index) => (
-            <WordChip key={index}>{word}</WordChip>
+            <WordChip key={`flower-${word}-${index}`}>{word}</WordChip>
           ))}
         </FoundWordsDisplay>
       </FoundWordsSection>
