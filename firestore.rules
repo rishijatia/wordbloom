@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Wide-open security rules for initial development - not suitable for production
+    match /{document=**} {
+      allow read, write: if true;
+    }
+    
+    // These are the more restrictive rules to use after testing is complete
+    // Uncomment these and comment out the rules above for production
+    
+    /* 
+    match /challenges/{challengeId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+    }
+    
+    match /challenge_codes/{code} {
+      allow read: if true;
+      allow create: if true;
+    }
+    
+    match /challenge_scores/{scoreId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if request.resource.data.deviceId == resource.data.deviceId && 
+                    request.resource.data.score > resource.data.score;
+    }
+    */
+  }
+}
