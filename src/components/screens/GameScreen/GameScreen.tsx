@@ -353,10 +353,81 @@ const HeaderControls = styled.div`
   align-items: center;
 `;
 
+// Challenge mode badge
+const ChallengeBadge = styled.div`
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #4a90e2;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  
+  @media (max-width: 768px) {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+  }
+`;
+
+// Challenge top score indicator
+const TopScoreIndicator = styled.div`
+  position: absolute;
+  top: 50px;
+  right: 10px;
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #333;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  
+  @media (max-width: 768px) {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    top: 40px;
+  }
+`;
+
+// Player counter
+const PlayerCounter = styled.div`
+  position: absolute;
+  top: 90px;
+  right: 10px;
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #333;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  
+  @media (max-width: 768px) {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    top: 70px;
+  }
+`;
+
 // Game Screen Component
 const GameScreen: React.FC = () => {
   const { state } = useGameContext();
-  const { timeRemaining, totalTime, score, foundWords = [], currentWord = '' } = useGameState();
+  const { 
+    timeRemaining, 
+    totalTime, 
+    score, 
+    foundWords = [], 
+    currentWord = '',
+    gameMode,
+    activeChallenge,
+    topChallengeScore
+  } = useGameState();
   
   // Calculate some stats
   const averageWordLength = foundWords.length 
@@ -367,8 +438,24 @@ const GameScreen: React.FC = () => {
     ? foundWords.reduce((longest: string, word: string) => word.length > longest.length ? word : longest, '') 
     : '';
   
+  const isChallenge = gameMode === 'challenge';
+  
   return (
     <GameContainer>
+      {isChallenge && (
+        <>
+          <ChallengeBadge>Challenge Mode</ChallengeBadge>
+          {topChallengeScore !== undefined && topChallengeScore > 0 && (
+            <TopScoreIndicator>Beat: {topChallengeScore} pts</TopScoreIndicator>
+          )}
+          {activeChallenge && (
+            <PlayerCounter>
+              Players: {activeChallenge.playerCount}/{activeChallenge.maxPlayers}
+            </PlayerCounter>
+          )}
+        </>
+      )}
+      
       <GameHeader>
         <HeaderControls>
           <ScoreDisplay>
@@ -414,6 +501,12 @@ const GameScreen: React.FC = () => {
               <span>Avg Word Length:</span>
               <span>{foundWords.length ? averageWordLength.toFixed(1) : '—'}</span>
             </StatItem>
+            {isChallenge && (
+              <StatItem>
+                <span>Challenge Code:</span>
+                <span>{activeChallenge?.code || '—'}</span>
+              </StatItem>
+            )}
           </StatsSection>
         </SidebarSection>
         

@@ -1,15 +1,22 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useState } from 'react';
-import { GameState, GameStatus } from '../models/GameState';
+import { GameState, GameStatus, GameMode } from '../models/GameState';
 import { PetalState } from '../models/Petal';
 import { LetterArrangement } from '../models/LetterArrangement';
+import { Challenge } from '../models/Challenge';
 import { generateOptimizedArrangement, Difficulty } from '../services/enhancedLetterGeneration';
 import { isValidWord, loadDictionary, getDictionaryStats } from '../services/dictionary';
 import { calculateScore } from '../services/scoring';
 import { arePetalsAdjacent } from '../utils/adjacency';
 import { canFormWordWithValidPath } from '../services/pathValidation';
+import { 
+  createChallenge as createChallengeService, 
+  getPlayerName, 
+  getTopChallengeScore,
+  submitChallengeScore
+} from '../services/challengeService';
 
 // Constants
-const GAME_TIME = 120; // 2 minutes in seconds
+const GAME_TIME = 10; // 2 minutes in seconds
 const MIN_WORD_LENGTH = 3;
 const MAX_WORD_LENGTH = 9; // Maximum word length limit
 
@@ -26,6 +33,7 @@ const initialState: GameState = {
     outerRing: []
   },
   gameStatus: 'idle',
+  gameMode: 'classic',
   invalidWordAttempt: false,
   showSuccessNotification: false,
   successMessage: '',
@@ -37,12 +45,15 @@ const initialState: GameState = {
     avgWordLength: 0,
     totalScore: 0
   },
-  lastWordScore: 0
+  lastWordScore: 0,
+  activeChallenge: undefined,
+  topChallengeScore: 0
 };
 
 // Action Types
 type GameAction =
   | { type: 'START_GAME'; dictionary: any }
+  | { type: 'START_CHALLENGE_GAME'; dictionary: any; challenge: Challenge; topScore: number }
   | { type: 'END_GAME' }
   | { type: 'PAUSE_GAME' }
   | { type: 'RESUME_GAME' }
@@ -53,7 +64,10 @@ type GameAction =
   | { type: 'SET_INVALID_WORD_ATTEMPT'; payload: boolean }
   | { type: 'SET_LETTER_ARRANGEMENT'; payload: LetterArrangement }
   | { type: 'RESET_SUCCESS_NOTIFICATION' }
-  | { type: 'RESET_ERROR_NOTIFICATION' };
+  | { type: 'RESET_ERROR_NOTIFICATION' }
+  | { type: 'SET_GAME_MODE'; payload: GameMode }
+  | { type: 'CREATE_CHALLENGE'; challenge: Challenge }
+  | { type: 'UPDATE_TOP_CHALLENGE_SCORE'; payload: number };
 
 // Reducer - defined outside the component
 function gameReducer(state: GameState, action: GameAction): GameState {
@@ -64,7 +78,19 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...initialState,
         letterArrangement,
-        gameStatus: 'playing'
+        gameStatus: 'playing',
+        gameMode: 'classic',
+        activeChallenge: undefined
+      };
+      
+    case 'START_CHALLENGE_GAME':
+      return {
+        ...initialState,
+        letterArrangement: action.challenge.letterArrangement,
+        gameStatus: 'playing',
+        gameMode: 'challenge',
+        activeChallenge: action.challenge,
+        topChallengeScore: action.topScore
       };
 
     case 'END_GAME':
@@ -300,6 +326,24 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         showErrorNotification: false,
         errorMessage: ''
       };
+      
+    case 'SET_GAME_MODE':
+      return {
+        ...state,
+        gameMode: action.payload
+      };
+      
+    case 'CREATE_CHALLENGE':
+      return {
+        ...state,
+        activeChallenge: action.challenge
+      };
+      
+    case 'UPDATE_TOP_CHALLENGE_SCORE':
+      return {
+        ...state,
+        topChallengeScore: action.payload
+      };
 
     default:
       return state;
@@ -311,6 +355,7 @@ interface GameContextType {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
   startGame: () => void;
+  startChallengeGame: (challenge: Challenge) => Promise<void>;
   endGame: () => void;
   pauseGame: () => void;
   resumeGame: () => void;
@@ -318,6 +363,8 @@ interface GameContextType {
   resetSelection: () => void;
   submitWord: () => void;
   clearInvalidWordState: () => void;
+  setGameMode: (mode: GameMode) => void;
+  createChallenge: () => Promise<Challenge | null>;
   isLoading: boolean;
 }
 
@@ -419,6 +466,29 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
   
+  const startChallengeGame = async (challenge: Challenge) => {
+    if (!isLoading && dictionary) {
+      try {
+        // Get the top score for this challenge
+        const topScore = await getTopChallengeScore(challenge.id);
+        
+        dispatch({ 
+          type: 'START_CHALLENGE_GAME', 
+          dictionary,
+          challenge,
+          topScore
+        });
+      } catch (error) {
+        console.error('Error starting challenge game:', error);
+        if (window.addNotification) {
+          window.addNotification('Error starting challenge', 'error', 3000);
+        }
+      }
+    } else {
+      console.warn('Cannot start challenge game - dictionary still loading');
+    }
+  };
+  
   const endGame = () => dispatch({ type: 'END_GAME' });
   const pauseGame = () => dispatch({ type: 'PAUSE_GAME' });
   const resumeGame = () => dispatch({ type: 'RESUME_GAME' });
@@ -435,11 +505,48 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
   const clearInvalidWordState = () => dispatch({ type: 'SET_INVALID_WORD_ATTEMPT', payload: false });
+  const setGameMode = (mode: GameMode) => dispatch({ type: 'SET_GAME_MODE', payload: mode });
+  
+  const createChallenge = async (): Promise<Challenge | null> => {
+    if (state.gameStatus === 'gameOver') {
+      try {
+        // Get player name
+        const playerName = getPlayerName();
+        console.log(`Creating challenge with letter arrangement:`, state.letterArrangement);
+        
+        // Create challenge with current letter arrangement
+        const challenge = await createChallengeService(state.letterArrangement, playerName);
+        
+        // Update context
+        dispatch({ type: 'CREATE_CHALLENGE', challenge });
+        
+        // Immediately submit score for the creator
+        await submitChallengeScore(
+          challenge.id,
+          playerName,
+          state.score,
+          state.foundWords
+        );
+        
+        console.log(`Challenge created with ID ${challenge.id} and creator score ${state.score} submitted`);
+        
+        return challenge;
+      } catch (error) {
+        console.error('Error creating challenge:', error);
+        if (window.addNotification) {
+          window.addNotification('Failed to create challenge', 'error', 3000);
+        }
+        return null;
+      }
+    }
+    return null;
+  };
   
   const value = {
     state,
     dispatch,
     startGame,
+    startChallengeGame,
     endGame,
     pauseGame,
     resumeGame,
@@ -447,6 +554,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     resetSelection,
     submitWord,
     clearInvalidWordState,
+    setGameMode,
+    createChallenge,
     isLoading
   };
   

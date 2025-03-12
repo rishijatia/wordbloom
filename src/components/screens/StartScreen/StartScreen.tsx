@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useGameContext } from '../../../contexts/GameContext';
+import { parseUrlForChallengeCode, getChallengeByCode } from '../../../services/challengeService';
+import ChallengeEntryScreen from '../ChallengeEntryScreen/ChallengeEntryScreen';
+import { Challenge } from '../../../models/Challenge';
 
 const StartContainer = styled.div`
   display: flex;
@@ -23,18 +26,37 @@ const Title = styled.h1`
   text-align: center;
 `;
 
-const StartButton = styled.button`
+const ButtonGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+  max-width: 300px;
+`;
+
+const Button = styled.button<{ $primary?: boolean; $secondary?: boolean }>`
   padding: 12px 24px;
   font-size: 1.2rem;
-  background-color: #5ac476;
-  color: white;
+  background-color: ${props => {
+    if (props.$primary) return '#5ac476';
+    if (props.$secondary) return '#4a90e2';
+    return '#f0f0f0';
+  }};
+  color: ${props => (props.$primary || props.$secondary) ? 'white' : '#333'};
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.2s;
-
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
   &:hover {
-    background-color: #4aa366;
+    background-color: ${props => {
+      if (props.$primary) return '#4aa366';
+      if (props.$secondary) return '#3a80d2';
+      return '#e0e0e0';
+    }};
   }
 `;
 
@@ -123,8 +145,45 @@ const Control = styled.div`
   }
 `;
 
+enum StartScreenMode {
+  MAIN,
+  JOIN_CHALLENGE
+}
+
 const StartScreen: React.FC = () => {
-  const { startGame } = useGameContext();
+  const { startGame, startChallengeGame, setGameMode } = useGameContext();
+  const [screenMode, setScreenMode] = useState<StartScreenMode>(StartScreenMode.MAIN);
+  
+  // Check URL for challenge code on mount
+  useEffect(() => {
+    const challengeCode = parseUrlForChallengeCode();
+    if (challengeCode) {
+      setScreenMode(StartScreenMode.JOIN_CHALLENGE);
+    }
+  }, []);
+  
+  const handleClassicMode = () => {
+    setGameMode('classic');
+    startGame();
+  };
+  
+  const handleJoinChallenge = (challenge: Challenge) => {
+    setGameMode('challenge');
+    startChallengeGame(challenge);
+  };
+  
+  const handleCancelJoinChallenge = () => {
+    setScreenMode(StartScreenMode.MAIN);
+  };
+  
+  if (screenMode === StartScreenMode.JOIN_CHALLENGE) {
+    return (
+      <ChallengeEntryScreen 
+        onCancel={handleCancelJoinChallenge}
+        onJoinChallenge={handleJoinChallenge}
+      />
+    );
+  }
   
   return (
     <StartContainer>
@@ -160,9 +219,14 @@ const StartScreen: React.FC = () => {
         </ControlsGrid>
       </InstructionsSection>
 
-      <StartButton onClick={startGame}>
-        Start Game
-      </StartButton>
+      <ButtonGroup>
+        <Button $primary onClick={handleClassicMode}>
+          Classic Mode
+        </Button>
+        <Button $secondary onClick={() => setScreenMode(StartScreenMode.JOIN_CHALLENGE)}>
+          Join Challenge
+        </Button>
+      </ButtonGroup>
     </StartContainer>
   );
 };
