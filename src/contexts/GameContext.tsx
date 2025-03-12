@@ -2,10 +2,11 @@ import React, { createContext, useContext, useReducer, useEffect, ReactNode, use
 import { GameState, GameStatus } from '../models/GameState';
 import { PetalState } from '../models/Petal';
 import { LetterArrangement } from '../models/LetterArrangement';
-import { generateLetterArrangement, Difficulty } from '../services/letterGeneration';
+import { generateOptimizedArrangement, Difficulty } from '../services/enhancedLetterGeneration';
 import { isValidWord, loadDictionary, getDictionaryStats } from '../services/dictionary';
 import { calculateScore } from '../services/scoring';
 import { arePetalsAdjacent } from '../utils/adjacency';
+import { canFormWordWithValidPath } from '../services/pathValidation';
 
 // Constants
 const GAME_TIME = 120; // 2 minutes in seconds
@@ -51,8 +52,8 @@ type GameAction =
 function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'START_GAME':
-      // Use the dictionary passed in the action
-      const letterArrangement = generateLetterArrangement(action.dictionary, Difficulty.MEDIUM);
+      // Use the enhanced letter generation
+      const letterArrangement = generateOptimizedArrangement(action.dictionary, Difficulty.EASY);
       return {
         ...initialState,
         letterArrangement,
@@ -188,61 +189,40 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       };
 
     case 'SUBMIT_WORD':
-      // Validate minimum word length
-      if (state.currentWord.length < MIN_WORD_LENGTH) {
-        return state;
-      }
-
-      // Validate maximum word length
-      if (state.currentWord.length > MAX_WORD_LENGTH) {
-        return {
-          ...state,
-          selectedPetals: [],
-          currentWord: ''
-        };
-      }
-
-      // Check if the word contains the center letter
-      const hasCenterLetter = state.selectedPetals.some(petal => petal.tier === 1);
-      if (!hasCenterLetter) {
-        return {
-          ...state,
-          invalidWordAttempt: true,
-          selectedPetals: [],
-          currentWord: ''
-        };
-      }
-
-      // Check if the word is valid and not already found
       const word = state.currentWord.toUpperCase();
-      if (isValidWord(word) && !state.foundWords.includes(word)) {
-        // Calculate score for the word
-        const wordScore = calculateScore(word, state.selectedPetals);
+      
+      // Enhanced validation using path validation
+      if (
+        word.length >= MIN_WORD_LENGTH &&
+        word.length <= MAX_WORD_LENGTH &&
+        !state.foundWords.includes(word) &&
+        isValidWord(word) &&
+        canFormWordWithValidPath(word, state.letterArrangement)
+      ) {
+        const score = calculateScore(word, state.selectedPetals);
+        const newFoundWords = [...state.foundWords, word];
         
         // Update stats
-        const updatedStats = {
-          wordsFound: state.stats.wordsFound + 1,
+        const stats = {
+          wordsFound: newFoundWords.length,
           longestWord: word.length > state.stats.longestWord.length ? word : state.stats.longestWord,
-          avgWordLength: ((state.stats.avgWordLength * state.stats.wordsFound) + word.length) / (state.stats.wordsFound + 1),
-          totalScore: state.stats.totalScore + wordScore
+          avgWordLength: newFoundWords.reduce((sum, w) => sum + w.length, 0) / newFoundWords.length,
+          totalScore: state.stats.totalScore + score
         };
         
         return {
           ...state,
-          score: state.score + wordScore,
-          foundWords: [...state.foundWords, word],
-          selectedPetals: [],
+          score: state.score + score,
+          foundWords: newFoundWords,
           currentWord: '',
-          stats: updatedStats,
+          selectedPetals: [],
+          stats,
           invalidWordAttempt: false
         };
       }
       
-      // Word is invalid or already found
       return {
         ...state,
-        selectedPetals: [],
-        currentWord: '',
         invalidWordAttempt: true
       };
 

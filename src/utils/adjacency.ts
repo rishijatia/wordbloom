@@ -36,12 +36,35 @@ export function arePetalsAdjacent(
     return diff === 1 || diff === ringSize - 1; // Adjacent or wrap around
   }
   
-  // Tier 3 (outer ring) connections to each other (adjacent only)
+  // Tier 3 (outer ring) connections to each other
   if (tier1 === 3 && tier2 === 3) {
     const ringSize = letterArrangement.outerRing.length;
     const diff = Math.abs(index1 - index2);
-    // Adjacent in the outer ring (next to each other or wrap around)
-    return diff === 1 || diff === ringSize - 1;
+    
+    // First, check if they're adjacent in the outer ring
+    const areAdjacent = diff === 1 || diff === ringSize - 1;
+    
+    // But that's not enough! We also need to check if they share a common Tier 2 parent
+    // or have adjacent Tier 2 parents
+    if (areAdjacent) {
+      const innerRingSize = letterArrangement.innerRing.length;
+      const outerRingSize = letterArrangement.outerRing.length;
+      
+      // Calculate the expected parent index in Tier 2 for each Tier 3 petal
+      const parent1 = Math.round((index1 / outerRingSize) * innerRingSize) % innerRingSize;
+      const parent2 = Math.round((index2 / outerRingSize) * innerRingSize) % innerRingSize;
+      
+      // Check if they share the same parent
+      if (parent1 === parent2) {
+        return true;
+      }
+      
+      // Check if their parents are adjacent in the inner ring
+      const parentDiff = Math.abs(parent1 - parent2);
+      return parentDiff === 1 || parentDiff === innerRingSize - 1;
+    }
+    
+    return false;
   }
   
   // Connection between Tier 2 (inner) and Tier 3 (outer)
