@@ -16,7 +16,7 @@ import {
 } from '../services/challengeService';
 
 // Constants
-const GAME_TIME = 10; // 2 minutes in seconds
+const GAME_TIME = 120; // 2 minutes in seconds
 const MIN_WORD_LENGTH = 3;
 const MAX_WORD_LENGTH = 9; // Maximum word length limit
 

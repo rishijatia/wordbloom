@@ -562,13 +562,18 @@ export function generateChallengeShareText(challenge: Challenge, score?: number)
     shareText = `I scored ${score} points in WordBloom! Can you beat me? ${shareText}`;
   }
   
-  return `${shareText}\n${shareUrl}`;
+  return shareText;
+}
+
+// Get challenge share URL
+export function getChallengeShareUrl(challenge: Challenge): string {
+  return `${window.location.origin}?c=${challenge.code}`;
 }
 
 // Share a challenge using Web Share API if available
 export function shareChallenge(challenge: Challenge, score?: number): Promise<void> {
   const shareText = generateChallengeShareText(challenge, score);
-  const shareUrl = `${window.location.origin}?c=${challenge.code}`;
+  const shareUrl = getChallengeShareUrl(challenge);
   
   const shareData = {
     title: 'WordBloom Challenge',
