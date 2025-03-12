@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="248" fill="#F0F9FF" stroke="#E0E0E0" stroke-width="8"/>
+  
+  <!-- Center petal (Tier 1) -->
+  <path d="M256 192L310.5 220.8L310.5 278.3L256 307.1L201.5 278.3L201.5 220.8L256 192Z" fill="#FFD56D" stroke="#333333" stroke-width="4"/>
+  
+  <!-- Inner ring petals (Tier 2) -->
+  <path d="M256 96L297.4 118.4L297.4 163.2L256 185.6L214.6 163.2L214.6 118.4L256 96Z" fill="#81D8C9" stroke="#333333" stroke-width="4"/>
+  <path d="M346.9 136L388.3 158.4L388.3 203.2L346.9 225.6L305.5 203.2L305.5 158.4L346.9 136Z" fill="#81D8C9" stroke="#333333" stroke-width="4"/>
+  <path d="M346.9 285L388.3 307.4L388.3 352.2L346.9 374.6L305.5 352.2L305.5 307.4L346.9 285Z" fill="#81D8C9" stroke="#333333" stroke-width="4"/>
+  <path d="M256 325L297.4 347.4L297.4 392.2L256 414.6L214.6 392.2L214.6 347.4L256 325Z" fill="#81D8C9" stroke="#333333" stroke-width="4"/>
+  <path d="M165.1 285L206.5 307.4L206.5 352.2L165.1 374.6L123.7 352.2L123.7 307.4L165.1 285Z" fill="#81D8C9" stroke="#333333" stroke-width="4"/>
+  <path d="M165.1 136L206.5 158.4L206.5 203.2L165.1 225.6L123.7 203.2L123.7 158.4L165.1 136Z" fill="#81D8C9" stroke="#333333" stroke-width="4"/>
+  
+  <!-- Letter T in the center -->
+  <text x="256" y="264" font-size="80" font-family="Quicksand, Arial, sans-serif" font-weight="bold" text-anchor="middle" fill="#333333">T</text>
+</svg>

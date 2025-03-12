@@ -21,4 +21,9 @@ export interface GameState {
   gameStatus: GameStatus;
   invalidWordAttempt: boolean;
   stats: GameStats;
+  lastWordScore?: number; // Track the score of the most recently submitted word
+  showSuccessNotification?: boolean; // Flag to show success notification
+  successMessage?: string; // Message for success notification
+  showErrorNotification?: boolean; // Flag to show error notification
+  errorMessage?: string; // Message for error notification
 } 

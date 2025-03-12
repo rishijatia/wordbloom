@@ -27,12 +27,17 @@ const initialState: GameState = {
   },
   gameStatus: 'idle',
   invalidWordAttempt: false,
+  showSuccessNotification: false,
+  successMessage: '',
+  showErrorNotification: false,
+  errorMessage: '',
   stats: {
     wordsFound: 0,
     longestWord: '',
     avgWordLength: 0,
     totalScore: 0
-  }
+  },
+  lastWordScore: 0
 };
 
 // Action Types
@@ -46,7 +51,9 @@ type GameAction =
   | { type: 'RESET_SELECTION' }
   | { type: 'SUBMIT_WORD' }
   | { type: 'SET_INVALID_WORD_ATTEMPT'; payload: boolean }
-  | { type: 'SET_LETTER_ARRANGEMENT'; payload: LetterArrangement };
+  | { type: 'SET_LETTER_ARRANGEMENT'; payload: LetterArrangement }
+  | { type: 'RESET_SUCCESS_NOTIFICATION' }
+  | { type: 'RESET_ERROR_NOTIFICATION' };
 
 // Reducer - defined outside the component
 function gameReducer(state: GameState, action: GameAction): GameState {
@@ -190,19 +197,39 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
     case 'SUBMIT_WORD':
       const word = state.currentWord.toUpperCase();
+      console.log('Attempting to submit word:', word);
       
       // Enhanced validation using path validation
+      const isLongEnough = word.length >= MIN_WORD_LENGTH;
+      const isShortEnough = word.length <= MAX_WORD_LENGTH;
+      const isNotDuplicate = !state.foundWords.includes(word);
+      const isInDictionary = isValidWord(word);
+      const hasValidPath = canFormWordWithValidPath(word, state.letterArrangement);
+      const includesCenterLetter = word.includes(state.letterArrangement.center.toUpperCase());
+      
+      console.log('Word validation:', {
+        isLongEnough,
+        isShortEnough,
+        isNotDuplicate,
+        isInDictionary,
+        hasValidPath,
+        includesCenterLetter
+      });
+      
+      // Check if the word is valid
       if (
-        word.length >= MIN_WORD_LENGTH &&
-        word.length <= MAX_WORD_LENGTH &&
-        !state.foundWords.includes(word) &&
-        isValidWord(word) &&
-        canFormWordWithValidPath(word, state.letterArrangement)
+        isLongEnough &&
+        isShortEnough &&
+        isNotDuplicate &&
+        isInDictionary &&
+        hasValidPath && 
+        includesCenterLetter
       ) {
+        // Word is valid - add it to found words and update score
         const score = calculateScore(word, state.selectedPetals);
         const newFoundWords = [...state.foundWords, word];
         
-        // Update stats
+        // Calculate stats
         const stats = {
           wordsFound: newFoundWords.length,
           longestWord: word.length > state.stats.longestWord.length ? word : state.stats.longestWord,
@@ -210,6 +237,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           totalScore: state.stats.totalScore + score
         };
         
+        // Set a flag to show notification rather than calling it directly (which causes the React warning)
         return {
           ...state,
           score: state.score + score,
@@ -217,14 +245,35 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           currentWord: '',
           selectedPetals: [],
           stats,
-          invalidWordAttempt: false
+          invalidWordAttempt: false,
+          lastWordScore: score,  // Store the score of this word
+          showSuccessNotification: true, // Flag to show notification
+          successMessage: `+${score} points!`
+        };
+      } else {
+        // Word is invalid - determine the reason
+        let reason = '';
+        
+        if (!isLongEnough) {
+          reason = 'Word too short';
+        } else if (!includesCenterLetter) {
+          reason = 'Must use center letter';
+        } else if (!isNotDuplicate) {
+          reason = 'Already found this word';
+        } else if (!isInDictionary) {
+          reason = 'Word not in dictionary';
+        } else {
+          reason = 'Invalid word';
+        }
+        
+        // Set error flag instead of directly calling notification
+        return {
+          ...state,
+          invalidWordAttempt: true,
+          showErrorNotification: true,
+          errorMessage: reason
         };
       }
-      
-      return {
-        ...state,
-        invalidWordAttempt: true
-      };
 
     case 'SET_LETTER_ARRANGEMENT':
       return {
@@ -236,6 +285,20 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         invalidWordAttempt: action.payload
+      };
+      
+    case 'RESET_SUCCESS_NOTIFICATION':
+      return {
+        ...state,
+        showSuccessNotification: false,
+        successMessage: ''
+      };
+
+    case 'RESET_ERROR_NOTIFICATION':
+      return {
+        ...state,
+        showErrorNotification: false,
+        errorMessage: ''
       };
 
     default:
@@ -303,6 +366,50 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     };
   }, [state.gameStatus, state.timeRemaining]);
   
+  // Invalid word attempt listener
+  useEffect(() => {
+    if (state.invalidWordAttempt) {
+      console.log('Invalid word reset triggered in context');
+      
+      // Give some time for the error to be displayed then reset
+      const timer = setTimeout(() => {
+        resetSelection();
+        dispatch({ type: 'SET_INVALID_WORD_ATTEMPT', payload: false });
+      }, 1200);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [state.invalidWordAttempt]);
+  
+  // Handle notifications
+  useEffect(() => {
+    // Handle success notifications
+    if (state.showSuccessNotification && state.successMessage) {
+      // Use window.addNotification safely outside the render cycle
+      if (window.addNotification) {
+        window.addNotification(state.successMessage, 'success', 2000);
+      }
+      
+      // Reset the notification flag
+      dispatch({
+        type: 'RESET_SUCCESS_NOTIFICATION'
+      });
+    }
+    
+    // Handle error notifications
+    if (state.showErrorNotification && state.errorMessage) {
+      // Use window.addNotification safely outside the render cycle
+      if (window.addNotification) {
+        window.addNotification(state.errorMessage, 'error', 2500);
+      }
+      
+      // Reset the notification flag
+      dispatch({
+        type: 'RESET_ERROR_NOTIFICATION'
+      });
+    }
+  }, [state.showSuccessNotification, state.showErrorNotification]);
+  
   // Game controller functions
   const startGame = () => {
     if (!isLoading && dictionary) {
@@ -317,7 +424,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const resumeGame = () => dispatch({ type: 'RESUME_GAME' });
   const selectPetal = (petal: PetalState) => dispatch({ type: 'SELECT_PETAL', payload: petal });
   const resetSelection = () => dispatch({ type: 'RESET_SELECTION' });
-  const submitWord = () => dispatch({ type: 'SUBMIT_WORD' });
+  const submitWord = () => {
+    console.log('submitWord called, current word:', state.currentWord);
+    if (state.currentWord.length >= 3) {
+      dispatch({ type: 'SUBMIT_WORD' });
+    } else {
+      console.log('Word too short, not submitting');
+      // Reset if the word is too short
+      resetSelection();
+    }
+  };
   const clearInvalidWordState = () => dispatch({ type: 'SET_INVALID_WORD_ATTEMPT', payload: false });
   
   const value = {
