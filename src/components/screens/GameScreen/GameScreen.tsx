@@ -355,9 +355,6 @@ const HeaderControls = styled.div`
 
 // Challenge mode badge
 const ChallengeBadge = styled.div`
-  position: absolute;
-  top: 10px;
-  right: 10px;
   background-color: #4a90e2;
   color: white;
   padding: 6px 12px;
@@ -365,7 +362,8 @@ const ChallengeBadge = styled.div`
   font-size: 0.9rem;
   font-weight: bold;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  z-index: 100;
+  display: inline-block;
+  margin-bottom: 10px;
   
   @media (max-width: 768px) {
     font-size: 0.8rem;
@@ -373,11 +371,17 @@ const ChallengeBadge = styled.div`
   }
 `;
 
+// Title with challenge badge container
+const TitleContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 15px;
+`;
+
 // Challenge top score indicator
 const TopScoreIndicator = styled.div`
-  position: absolute;
-  top: 50px;
-  right: 10px;
   background-color: rgba(255, 255, 255, 0.9);
   color: #333;
   padding: 6px 12px;
@@ -385,20 +389,16 @@ const TopScoreIndicator = styled.div`
   font-size: 0.9rem;
   font-weight: bold;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  z-index: 100;
+  margin-top: 8px;
   
   @media (max-width: 768px) {
     font-size: 0.8rem;
     padding: 4px 8px;
-    top: 40px;
   }
 `;
 
 // Player counter
 const PlayerCounter = styled.div`
-  position: absolute;
-  top: 90px;
-  right: 10px;
   background-color: rgba(255, 255, 255, 0.9);
   color: #333;
   padding: 6px 12px;
@@ -406,12 +406,11 @@ const PlayerCounter = styled.div`
   font-size: 0.9rem;
   font-weight: bold;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  z-index: 100;
+  margin-top: 8px;
   
   @media (max-width: 768px) {
     font-size: 0.8rem;
     padding: 4px 8px;
-    top: 70px;
   }
 `;
 
@@ -442,25 +441,26 @@ const GameScreen: React.FC = () => {
   
   return (
     <GameContainer>
-      {isChallenge && (
-        <>
-          <ChallengeBadge>Challenge Mode</ChallengeBadge>
-          {topChallengeScore !== undefined && topChallengeScore > 0 && (
-            <TopScoreIndicator>Beat: {topChallengeScore} pts</TopScoreIndicator>
-          )}
-          {activeChallenge && (
-            <PlayerCounter>
-              Players: {activeChallenge.playerCount}/{activeChallenge.maxPlayers}
-            </PlayerCounter>
-          )}
-        </>
-      )}
-      
       <GameHeader>
+        {isChallenge && (
+          <TitleContainer>
+            <ChallengeBadge>Challenge Mode</ChallengeBadge>
+            {activeChallenge && (
+              <PlayerCounter>
+                Players: {activeChallenge.playerCount}/{activeChallenge.maxPlayers}
+              </PlayerCounter>
+            )}
+          </TitleContainer>
+        )}
         <HeaderControls>
-          <ScoreDisplay>
-            Score: {score}
-          </ScoreDisplay>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <ScoreDisplay>
+              Score: {score}
+            </ScoreDisplay>
+            {isChallenge && topChallengeScore !== undefined && topChallengeScore > 0 && (
+              <TopScoreIndicator>Beat: {topChallengeScore} pts</TopScoreIndicator>
+            )}
+          </div>
           <Timer timeRemaining={timeRemaining} totalTime={totalTime} />
         </HeaderControls>
         <CurrentWordDisplay>
