@@ -21,7 +21,19 @@ Play solo and try to find as many words as possible within the time limit.
 - Everyone plays the same letter arrangement
 - Compare scores on a real-time leaderboard
 - Up to 10 players can join the same challenge
+- Challenges expire after 24 hours
+- View all your challenges in the Challenge Dashboard
 - Firebase integration for real-time updates and persistence
+
+### Challenge Dashboard
+- Central hub for managing all your challenges
+- View active, created, and historical challenges
+- Detailed analytics for each challenge including:
+  - Word uniqueness visualization
+  - Letter usage heatmap
+  - Player leaderboard
+- Share challenges with preview images
+- Track challenge expiration with countdown timers
 
 ## Tech Stack
 

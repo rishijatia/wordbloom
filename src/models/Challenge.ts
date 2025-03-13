@@ -16,9 +16,11 @@ export interface Challenge {
   createdBy: string;            // Player ID or device ID
   createdByName: string;        // Creator's display name
   createdAt: number;            // Creation timestamp
+  expiresAt: number;            // Expiration timestamp (24 hours after creation)
   playerCount: number;          // Current player count (0-10)
   maxPlayers: number;           // Set to 10
-  status: 'active' | 'full';    // Challenge status
+  status: 'active' | 'full' | 'expired';  // Challenge status
+  totalWordsFound?: number;     // Aggregated count of all words found
 }
 
 export interface ChallengeScore {

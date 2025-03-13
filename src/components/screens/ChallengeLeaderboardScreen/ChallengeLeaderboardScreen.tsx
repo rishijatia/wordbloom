@@ -11,6 +11,7 @@ import {
   generateChallengeShareText,
   getChallengeShareUrl
 } from '../../../services/challengeService';
+import ShareModal from '../../../components/game/ShareModal';
 
 const LeaderboardContainer = styled.div`
   display: flex;
@@ -293,6 +294,7 @@ const ChallengeLeaderboardScreen: React.FC<ChallengeLeaderboardScreenProps> = ({
   const [leaderboard, setLeaderboard] = useState<ChallengeScore[]>([]);
   const [updatedChallenge, setUpdatedChallenge] = useState<Challenge>(challenge);
   const [loading, setLoading] = useState(true);
+  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
   const deviceId = getDeviceId();
   
   useEffect(() => {
@@ -360,18 +362,8 @@ const ChallengeLeaderboardScreen: React.FC<ChallengeLeaderboardScreenProps> = ({
     };
   }, [challenge.id]);
   
-  const handleShare = async () => {
-    try {
-      await shareChallenge(updatedChallenge, score);
-      if (window.addNotification) {
-        window.addNotification('Challenge shared!', 'success', 2000);
-      }
-    } catch (err) {
-      console.error('Failed to share challenge:', err);
-      if (window.addNotification) {
-        window.addNotification('Failed to share challenge', 'error', 2000);
-      }
-    }
+  const handleShare = () => {
+    setIsShareModalOpen(true);
   };
   
   const shareUrl = getChallengeShareUrl(updatedChallenge);
@@ -527,6 +519,13 @@ const ChallengeLeaderboardScreen: React.FC<ChallengeLeaderboardScreenProps> = ({
           Back to Home
         </Button>
       </ButtonGroup>
+      
+      <ShareModal
+        challenge={updatedChallenge}
+        playerScore={score}
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+      />
     </LeaderboardContainer>
   );
 };

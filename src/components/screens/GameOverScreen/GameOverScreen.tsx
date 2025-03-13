@@ -5,6 +5,7 @@ import { Challenge } from '../../../models/Challenge';
 import ChallengeCreationScreen from '../ChallengeCreationScreen/ChallengeCreationScreen';
 import ChallengeCodeScreen from '../ChallengeCodeScreen/ChallengeCodeScreen';
 import ChallengeLeaderboardScreen from '../ChallengeLeaderboardScreen/ChallengeLeaderboardScreen';
+import ShareModal from '../../../components/game/ShareModal';
 import { submitChallengeScore, getPlayerName, savePlayerName } from '../../../services/challengeService';
 
 const GameOverContainer = styled.div`
@@ -127,13 +128,18 @@ enum GameOverMode {
   SHOW_CHALLENGE_CODE
 }
 
-const GameOverScreen: React.FC = () => {
+interface GameOverScreenProps {
+  onViewChallenges?: () => void;
+}
+
+const GameOverScreen: React.FC<GameOverScreenProps> = ({ onViewChallenges }) => {
   const { state, startGame, startChallengeGame, createChallenge } = useGameContext();
   const { score, foundWords, stats, gameMode, activeChallenge } = state;
   const [screenMode, setScreenMode] = useState<GameOverMode>(
     gameMode === 'challenge' ? GameOverMode.CHALLENGE_RESULTS : GameOverMode.CLASSIC_RESULTS
   );
   const [createdChallenge, setCreatedChallenge] = useState<Challenge | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
   
   // Format average word length to 1 decimal place
   const formattedAvgLength = stats.avgWordLength.toFixed(1);
@@ -232,6 +238,10 @@ const GameOverScreen: React.FC = () => {
     }
   };
   
+  const handleShareChallenge = () => {
+    setIsShareModalOpen(true);
+  };
+  
   // Challenge Creation Screen
   if (screenMode === GameOverMode.CREATE_CHALLENGE) {
     return (
@@ -309,7 +319,26 @@ const GameOverScreen: React.FC = () => {
         <Button $secondary onClick={() => setScreenMode(GameOverMode.CREATE_CHALLENGE)}>
           Create Challenge
         </Button>
+        {onViewChallenges && (
+          <Button onClick={onViewChallenges}>
+            View Challenges
+          </Button>
+        )}
+        {activeChallenge && (
+          <Button onClick={handleShareChallenge}>
+            Share Challenge
+          </Button>
+        )}
       </ButtonGroup>
+      
+      {activeChallenge && (
+        <ShareModal
+          challenge={activeChallenge}
+          playerScore={score}
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+        />
+      )}
     </GameOverContainer>
   );
 };
