@@ -13,6 +13,7 @@ const GlobalStyle = createGlobalStyle`
 
   body {
     background-color: ${props => props.theme.colors.background};
+    background-image: ${props => props.theme.colors.backgroundGradient};
     font-family: 'Nunito', 'Segoe UI', sans-serif;
     color: ${props => props.theme.colors.text};
     display: flex;
@@ -38,10 +39,10 @@ const GlobalStyle = createGlobalStyle`
   }
   
   @keyframes fadeInOut {
-    0% { opacity: 0; transform: translate(-50%, -70%); }
-    15% { opacity: 1; transform: translate(-50%, -50%); }
-    85% { opacity: 1; transform: translate(-50%, -50%); }
-    100% { opacity: 0; transform: translate(-50%, -30%); }
+    0% { opacity: 0; transform: translateY(-10px); }
+    15% { opacity: 1; transform: translateY(0); }
+    85% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(10px); }
   }
   
   @keyframes growShrink {
@@ -55,6 +56,25 @@ const GlobalStyle = createGlobalStyle`
     20% { transform: translate(-50%, -20px); opacity: 1; }
     80% { transform: translate(-50%, -60px); opacity: 1; }
     100% { transform: translate(-50%, -100px); opacity: 0; }
+  }
+  
+  /* Add enhanced animations */
+  @keyframes glowPulse {
+    0% { box-shadow: 0 0 5px rgba(245, 185, 70, 0.3); }
+    50% { box-shadow: 0 0 15px rgba(245, 185, 70, 0.5); }
+    100% { box-shadow: 0 0 5px rgba(245, 185, 70, 0.3); }
+  }
+  
+  @keyframes connectionGrow {
+    0% { transform: scaleX(0); opacity: 0.3; }
+    100% { transform: scaleX(1); opacity: 1; }
+  }
+  
+  @keyframes scoreFloat {
+    0% { opacity: 0; transform: translate(-50%, 0) scale(0.7); }
+    20% { opacity: 1; transform: translate(-50%, -20px) scale(1.1); }
+    80% { opacity: 1; transform: translate(-50%, -40px) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -60px) scale(0.9); }
   }
   
   /* Mobile optimizations */

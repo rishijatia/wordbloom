@@ -1,34 +1,37 @@
 export const theme = {
   colors: {
-    primary: '#3498db',
-    secondary: '#2ecc71',
-    danger: '#e74c3c',
-    warning: '#f39c12',
-    background: '#F0F9FF', // Light blue background
+    // Primary brand colors
+    primary: '#19A78E',     // Rich teal
+    secondary: '#F5B946',   // Warm amber
+    danger: '#E05D55',      // Soft red
+    warning: '#F5B946',     // Amber
+    
+    // UI colors
+    background: '#F8FCF9',   // Off-white with slight green tint
+    backgroundGradient: 'linear-gradient(165deg, #F8FCF9 0%, #E3F1E9 100%)',
+    panel: 'rgba(255, 255, 255, 0.85)',
     text: '#333333',
-    lightText: '#7f8c8d',
+    lightText: '#71847A',
     
-    // Botanical color scheme for petals
-    centerPetal: '#FFD56D', // Golden yellow for center petal
-    innerPetal: '#81D8C9', // Teal mint for inner ring
-    outerPetal: '#C0A5E3', // Soft purple for outer ring
+    // Petal colors - completely redesigned
+    centerPetal: '#F5B946',       // Warm amber center
+    selectedCenterPetal: '#FFD980', // Lighter amber when selected
     
-    // Selected states - more vibrant versions
-    selectedCenterPetal: '#FFB347', // Brighter golden for selected center
-    selectedInnerPetal: '#4ECDC4', // Brighter teal for selected inner
-    selectedOuterPetal: '#A893DB', // Brighter purple for selected outer
+    innerPetal: '#5ABEAF',        // Teal for inner ring
+    selectedInnerPetal: '#8BD5CB', // Lighter teal when selected
     
-    // Panel and UI colors
-    panel: '#FFFFFF', // White panels
-    accent: '#FF8C6B', // Coral accent
-    timerBg: '#E0F2F1', // Timer background
-    success: '#66BB6A', // Green success
-    error: '#EF5350', // Red error
-    shadow: 'rgba(0, 0, 0, 0.1)', // Shadows
+    outerPetal: '#B6A4DE',        // Soft lavender for outer
+    selectedOuterPetal: '#CAB8F2', // Lighter lavender when selected
     
     // Connection colors
-    activeConnection: 'rgba(81, 216, 201, 0.8)', // Teal connection
-    staticConnection: 'rgba(224, 224, 224, 0.5)'
+    activeConnection: 'rgba(245, 185, 70, 0.9)',
+    staticConnection: 'rgba(224, 224, 224, 0.5)',
+    
+    // Success/feedback colors
+    success: '#5AAC6E',      // Garden green
+    accent: '#FF8C6B',       // Coral accent
+    timerBg: '#E0F2F1',      // Timer background
+    shadow: 'rgba(22, 78, 99, 0.15)'  // Richer shadow
   },
   
   fontSizes: {
@@ -50,16 +53,17 @@ export const theme = {
   },
   
   borderRadius: {
-    small: '8px',
-    medium: '12px',
-    large: '16px',
+    small: '12px',         // Increased roundness
+    medium: '16px',        // Increased roundness 
+    large: '20px',         // Increased roundness
     round: '50%'
   },
   
   shadows: {
-    small: '0 2px 8px rgba(0, 0, 0, 0.1)',
-    medium: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    large: '0 6px 16px rgba(0, 0, 0, 0.15)'
+    small: '0 3px 8px rgba(22, 78, 99, 0.1)',   // More atmospheric shadows
+    medium: '0 6px 16px rgba(22, 78, 99, 0.12)',
+    large: '0 8px 24px rgba(22, 78, 99, 0.15)',
+    glow: '0 0 15px rgba(245, 185, 70, 0.4)'    // New amber glow shadow
   },
   
   // Responsive breakpoints

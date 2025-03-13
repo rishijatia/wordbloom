@@ -27,22 +27,21 @@ const getSizeByTier = (tier: PetalTier, index: number): string => {
   }
 };
 
-// Background color based on tier and position
+// Update these color functions in Petal.tsx
 const getColorByTier = (tier: PetalTier, index: number, theme: any): string => {
   switch (tier) {
-    case 1: return theme.colors.centerPetal; // Golden yellow for center (Tier 1)
-    case 2: return theme.colors.innerPetal; // Teal mint for inner ring (Tier 2)
-    case 3: return theme.colors.outerPetal; // Soft purple for outer ring (Tier 3)
+    case 1: return theme.colors.centerPetal;      // Amber for center
+    case 2: return theme.colors.innerPetal;       // Teal for inner ring
+    case 3: return theme.colors.outerPetal;       // Lavender for outer ring
     default: return '#ffffff';
   }
 };
 
-// Selected color by tier - more vibrant versions for better visual distinction
 const getSelectedColorByTier = (tier: PetalTier, index: number, theme: any): string => {
   switch (tier) {
-    case 1: return theme.colors.selectedCenterPetal; // Brighter golden for center
-    case 2: return theme.colors.selectedInnerPetal; // Brighter teal for inner ring
-    case 3: return theme.colors.selectedOuterPetal; // Brighter purple for outer ring
+    case 1: return theme.colors.selectedCenterPetal;  // Bright amber
+    case 2: return theme.colors.selectedInnerPetal;   // Bright teal
+    case 3: return theme.colors.selectedOuterPetal;   // Bright lavender
     default: return '#ffffff';
   }
 };
@@ -72,19 +71,20 @@ const HexagonalPetal = styled.div<{
   align-items: center;
   justify-content: center;
   width: ${props => getSizeByTier(props.$tier, props.$index)};
-  height: calc(${props => getSizeByTier(props.$tier, props.$index)} * 0.866); /* Hexagon height ratio */
+  height: calc(${props => getSizeByTier(props.$tier, props.$index)} * 0.866);
   background-color: ${props => props.$isSelected 
     ? getSelectedColorByTier(props.$tier, props.$index, props.theme)
     : getColorByTier(props.$tier, props.$index, props.theme)};
   clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
   font-weight: bold;
   font-size: ${props => getFontSizeByTier(props.$tier, props.$index)};
-  color: ${props => props.theme.colors.text};
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   user-select: none;
   box-shadow: ${props => props.$isSelected 
-    ? props.theme.shadows.medium
-    : props.theme.shadows.small};
+    ? `0 4px 12px rgba(0, 0, 0, 0.2), inset 0 0 10px rgba(255, 255, 255, 0.4)`
+    : `0 2px 6px rgba(0, 0, 0, 0.15), inset 0 0 6px rgba(255, 255, 255, 0.3)`};
   transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
   z-index: ${props => props.$isSelected 
     ? 10
@@ -92,36 +92,55 @@ const HexagonalPetal = styled.div<{
   
   /* Position the hexagon */
   left: calc(${props => props.$x}% - ${props => getSizeByTier(props.$tier, props.$index)}/2);
-  top: calc(${props => props.$y}% - ${props => getSizeByTier(props.$tier, props.$index)} * 0.433); /* Hexagon height/2 */
+  top: calc(${props => props.$y}% - ${props => getSizeByTier(props.$tier, props.$index)} * 0.433);
   
   /* Visual effects based on state */
-  transform: ${props => props.$isSelected 
-    ? 'scale(1.08)' 
-    : props.$isHighlighted
-      ? 'scale(1.04)'
-      : 'scale(1)'};
+  transform: ${props => {
+    if (props.$isSelected) return 'scale(1.12) translateZ(0)';
+    if (props.$isHighlighted) return 'scale(1.06) translateZ(0)';
+    return 'scale(1) translateZ(0)';
+  }};
   
-  /* Highlight for selected state - solid color instead of border */
-  border: none;
+  /* Add gradient overlay for 3D effect */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.4) 0%, 
+      rgba(255, 255, 255, 0.1) 50%, 
+      rgba(0, 0, 0, 0.05) 100%
+    );
+    pointer-events: none;
+    opacity: ${props => props.$isSelected ? 0.9 : 0.6};
+  }
   
   /* Next typing candidate styling - subtle glow */
-  ${props => props.$isNextTypingCandidate && `
-    box-shadow: 0 0 10px ${props.theme.colors.accent};
+  ${props => props.$isNextTypingCandidate && !props.$isSelected && `
+    animation: glowPulse 1.5s infinite;
   `}
-  outline: none;
   
   /* Neighbor styling */
   ${props => props.$isNeighbor && !props.$isSelected && `
-    background-color: ${getColorByTier(props.$tier, props.$index, props.theme)}; 
-    box-shadow: 0 0 8px ${props.theme.colors.activeConnection};
+    box-shadow: 0 0 12px ${getSelectedColorByTier(props.$tier, props.$index, props.theme)}80;
   `}
   
-  /* Add subtle pulse animation on hover */
+  /* Add subtle hover effect */
   &:hover {
-    transform: ${props => props.$isSelected ? 'scale(1.08)' : 'scale(1.04)'};
+    transform: ${props => props.$isSelected ? 'scale(1.12) translateZ(0)' : 'scale(1.06) translateZ(0)'};
     box-shadow: ${props => props.$isSelected 
-      ? `0 0 12px ${props.theme.colors.shadow}`
-      : `0 0 8px ${props.theme.colors.shadow}`};
+      ? `0 6px 16px rgba(0, 0, 0, 0.25), inset 0 0 12px rgba(255, 255, 255, 0.5)`
+      : `0 4px 12px rgba(0, 0, 0, 0.2), inset 0 0 8px rgba(255, 255, 255, 0.4)`};
+  }
+  
+  /* Add active press effect */
+  &:active {
+    transform: scale(0.95) translateZ(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   }
 `;
 

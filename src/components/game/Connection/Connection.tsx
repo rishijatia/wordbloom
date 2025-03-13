@@ -22,7 +22,6 @@ const ConnectionContainer = styled.div<{ $active: boolean }>`
   z-index: ${props => props.$active ? 2 : 1};
 `;
 
-// Use $-prefixed props to prevent them from being passed to the DOM
 const ConnectionLine = styled.div<{ 
   $length: number; 
   $angle: number; 
@@ -31,140 +30,81 @@ const ConnectionLine = styled.div<{
   $isSibling: boolean;
 }>`
   position: absolute;
-  height: ${props => props.$active ? '16px' : '4px'};
+  height: ${props => props.$active ? '12px' : '3px'};
   width: ${props => props.$length}px;
   transform: rotate(${props => props.$angle}deg);
   transform-origin: 0 50%;
-  background-color: ${props => {
+  
+  /* Enhanced gradient colors for connections */
+  background: ${props => {
     if (props.$active) {
-      if (props.$isSibling) {
-        // For active sibling connections, use the same color as non-sibling connections
-        switch (props.$connectionType) {
-          case 'inner-inner': return 'rgba(91, 143, 249, 0.9)';
-          case 'outer-outer': return 'rgba(76, 175, 80, 0.9)';
-          default: return 'rgba(52, 152, 219, 0.9)';
-        }
-      }
       // Active connection styles based on connection type
       switch (props.$connectionType) {
-        case 'center-inner': return 'rgba(246, 185, 59, 0.9)';
-        case 'inner-outer': return 'rgba(52, 152, 219, 0.9)';
-        case 'inner-inner': return 'rgba(91, 143, 249, 0.9)';
-        case 'outer-outer': return 'rgba(76, 175, 80, 0.9)';
-        default: return 'rgba(52, 152, 219, 0.9)';
+        case 'center-inner': return 'linear-gradient(90deg, rgba(245, 185, 70, 0.9), rgba(245, 185, 70, 0.7))';
+        case 'inner-outer': return 'linear-gradient(90deg, rgba(90, 190, 175, 0.9), rgba(90, 190, 175, 0.7))';
+        case 'inner-inner': return 'linear-gradient(90deg, rgba(90, 190, 175, 0.9), rgba(90, 190, 175, 0.7))';
+        case 'outer-outer': return 'linear-gradient(90deg, rgba(182, 164, 222, 0.9), rgba(182, 164, 222, 0.7))';
+        default: return 'linear-gradient(90deg, rgba(90, 190, 175, 0.9), rgba(90, 190, 175, 0.7))';
       }
     } else {
-      if (props.$isSibling) {
-        // For inactive sibling connections, use the same color as non-sibling connections
-        switch (props.$connectionType) {
-          case 'inner-inner': return 'rgba(91, 143, 249, 0.15)';
-          case 'outer-outer': return 'rgba(76, 175, 80, 0.15)';
-          default: return 'rgba(52, 152, 219, 0.15)';
-        }
-      }
       // Inactive connection styles - more visible but subtle
-      switch (props.$connectionType) {
-        case 'center-inner': return 'rgba(246, 185, 59, 0.15)';
-        case 'inner-outer': return 'rgba(52, 152, 219, 0.15)';
-        case 'inner-inner': return 'rgba(91, 143, 249, 0.15)';
-        case 'outer-outer': return 'rgba(76, 175, 80, 0.15)';
-        default: return 'rgba(52, 152, 219, 0.15)';
-      }
+      return 'rgba(224, 224, 224, 0.3)';
     }
   }};
-  border-radius: ${props => props.$active ? '8px' : '4px'};
-  border-style: ${props => 'none'};
-  border-width: ${props => props.$isSibling ? (props.$active ? '8px' : '2px') : '0'};
-  border-color: ${props => {
-    if (props.$isSibling) {
-      switch (props.$connectionType) {
-        case 'inner-inner': return props.$active ? 'rgba(91, 143, 249, 0.9)' : 'rgba(91, 143, 249, 0.15)';
-        case 'outer-outer': return props.$active ? 'rgba(76, 175, 80, 0.9)' : 'rgba(76, 175, 80, 0.15)';
-        default: return props.$active ? 'rgba(52, 152, 219, 0.9)' : 'rgba(52, 152, 219, 0.15)';
-      }
-    }
-    return 'transparent';
-  }};
+  
+  border-radius: ${props => props.$active ? '6px' : '2px'};
   box-shadow: ${props => {
     if (props.$active) {
       // Custom glow color based on connection type
       switch (props.$connectionType) {
-        case 'center-inner': return '0 0 10px rgba(246, 185, 59, 0.8), 0 0 20px rgba(246, 185, 59, 0.4)';
-        case 'inner-outer': return '0 0 10px rgba(52, 152, 219, 0.8), 0 0 20px rgba(52, 152, 219, 0.4)';
-        case 'inner-inner': return '0 0 10px rgba(91, 143, 249, 0.8), 0 0 20px rgba(91, 143, 249, 0.4)';
-        case 'outer-outer': return '0 0 10px rgba(76, 175, 80, 0.8), 0 0 20px rgba(76, 175, 80, 0.4)';
-        default: return '0 0 10px rgba(52, 152, 219, 0.8), 0 0 20px rgba(52, 152, 219, 0.4)';
+        case 'center-inner': return '0 0 10px rgba(245, 185, 70, 0.5)';
+        case 'inner-outer': return '0 0 10px rgba(90, 190, 175, 0.5)';
+        case 'inner-inner': return '0 0 10px rgba(90, 190, 175, 0.5)';
+        case 'outer-outer': return '0 0 10px rgba(182, 164, 222, 0.5)';
+        default: return '0 0 10px rgba(90, 190, 175, 0.5)';
       }
     } else {
       return 'none';
     }
   }};
-  opacity: ${props => props.$active ? 1 : 0.7};
+  
+  opacity: ${props => props.$active ? 1 : 0.5};
   transition: all 0.2s ease;
   
+  /* Add animation for active connections */
   ${props => props.$active && `
-    animation: pulse-${props.$connectionType} 1.5s infinite alternate;
-    
-    @keyframes pulse-center-inner {
-      0% {
-        box-shadow: 0 0 10px rgba(246, 185, 59, 0.8), 0 0 20px rgba(246, 185, 59, 0.4);
-      }
-      100% {
-        box-shadow: 0 0 15px rgba(246, 185, 59, 0.9), 0 0 30px rgba(246, 185, 59, 0.6);
-      }
-    }
-    
-    @keyframes pulse-inner-outer {
-      0% {
-        box-shadow: 0 0 10px rgba(52, 152, 219, 0.8), 0 0 20px rgba(52, 152, 219, 0.4);
-      }
-      100% {
-        box-shadow: 0 0 15px rgba(52, 152, 219, 0.9), 0 0 30px rgba(52, 152, 219, 0.6);
-      }
-    }
-    
-    @keyframes pulse-inner-inner {
-      0% {
-        box-shadow: 0 0 10px rgba(91, 143, 249, 0.8), 0 0 20px rgba(91, 143, 249, 0.4);
-      }
-      100% {
-        box-shadow: 0 0 15px rgba(91, 143, 249, 0.9), 0 0 30px rgba(91, 143, 249, 0.6);
-      }
-    }
-    
-    @keyframes pulse-outer-outer {
-      0% {
-        box-shadow: 0 0 10px rgba(76, 175, 80, 0.8), 0 0 20px rgba(76, 175, 80, 0.4);
-      }
-      100% {
-        box-shadow: 0 0 15px rgba(76, 175, 80, 0.9), 0 0 30px rgba(76, 175, 80, 0.6);
-      }
-    }
+    animation: connectionGrow 0.2s ease-out forwards;
   `}
   
+  /* Add connection endpoint dot */
   &::after {
     content: '';
+    display: ${props => props.$active ? 'block' : 'none'};
     position: absolute;
-    top: ${props => props.$active ? '-8px' : '-6px'};
-    left: ${props => props.$active ? '-8px' : '-6px'};
-    width: ${props => props.$active ? '32px' : '16px'};
-    height: ${props => props.$active ? '32px' : '16px'};
+    right: -4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background-color: ${props => {
-      if (props.$active) {
-        switch (props.$connectionType) {
-          case 'center-inner': return 'rgba(246, 185, 59, 0.9)';
-          case 'inner-outer': return 'rgba(52, 152, 219, 0.9)';
-          case 'inner-inner': return 'rgba(91, 143, 249, 0.9)';
-          case 'outer-outer': return 'rgba(76, 175, 80, 0.9)';
-          default: return 'rgba(52, 152, 219, 0.9)';
-        }
-      } else {
-        return 'transparent';
+      switch (props.$connectionType) {
+        case 'center-inner': return 'rgba(245, 185, 70, 0.9)';
+        case 'inner-outer': return 'rgba(90, 190, 175, 0.9)';
+        case 'inner-inner': return 'rgba(90, 190, 175, 0.9)';
+        case 'outer-outer': return 'rgba(182, 164, 222, 0.9)';
+        default: return 'rgba(90, 190, 175, 0.9)';
       }
     }};
-    box-shadow: ${props => props.$active ? '0 0 16px rgba(255, 255, 255, 0.8)' : 'none'};
-    display: ${props => props.$active ? 'block' : 'none'};
+    box-shadow: 0 0 8px ${props => {
+      switch (props.$connectionType) {
+        case 'center-inner': return 'rgba(245, 185, 70, 0.7)';
+        case 'inner-outer': return 'rgba(90, 190, 175, 0.7)';
+        case 'inner-inner': return 'rgba(90, 190, 175, 0.7)';
+        case 'outer-outer': return 'rgba(182, 164, 222, 0.7)';
+        default: return 'rgba(90, 190, 175, 0.7)';
+      }
+    }};
   }
 `;
 

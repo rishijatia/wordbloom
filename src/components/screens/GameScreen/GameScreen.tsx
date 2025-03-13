@@ -5,7 +5,7 @@ import Flower from '../../game/Flower/Flower';
 import { useGameState } from '../../../hooks/useGameState';
 import { Score } from '../../game/Score/Score';
 
-// Main game container with updated design
+// Main container with gradient background
 const GameContainer = styled.div`
   position: relative;
   display: flex;
@@ -14,26 +14,40 @@ const GameContainer = styled.div`
   width: 100vw;
   min-height: 100vh;
   padding: ${props => props.theme.spacing.md};
-  background-color: ${props => props.theme.colors.background};
-  background-image: linear-gradient(135deg, #e0f7fa 0%, #f0f9ff 100%);
+  background: ${props => props.theme.colors.backgroundGradient};
   overflow: hidden;
+
+  /* Add subtle pattern overlay */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M54.627 0l.83.828-1.415 1.415L51.8 0h2.827zM5.373 0l-.83.828L5.96 2.243 8.2 0H5.374zM48.97 0l3.657 3.657-1.414 1.414L46.143 0h2.828zM11.03 0L7.372 3.657l1.415 1.414L13.857 0H11.03zm32.284 0L39.9 3.414 42.28 0h1.032zm-9.9 0L35.6 1.414 40.57 0h-7.14zM16.686 0L10.743 5.943 13.57 0h3.116zM36.157 0L32 4.157 36.157 0z' fill='%2390a29c' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+    opacity: 0.5;
+    pointer-events: none;
+  }
 
   @media (max-width: 768px) {
     padding: ${props => props.theme.spacing.sm};
   }
 `;
 
-// Game header with score, timer, and current word
+// Glass effect header
 const GameHeader = styled.div`
   width: 100%;
-  max-width: 1200px;
+  max-width: 600px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: ${props => props.theme.spacing.md};
   z-index: 10;
   border-radius: ${props => props.theme.borderRadius.medium};
-  background: ${props => props.theme.colors.panel};
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   box-shadow: ${props => props.theme.shadows.medium};
   margin: 0 auto;
   margin-bottom: ${props => props.theme.spacing.md};
@@ -73,7 +87,7 @@ const GameContent = styled.div`
   }
 `;
 
-// Responsive flower container with improved scaling
+// Enhanced flower section
 const FlowerSection = styled.div`
   flex: 2;
   display: flex;
@@ -88,9 +102,11 @@ const FlowerSection = styled.div`
   margin: 0 auto;
   overflow: visible;
   transform-origin: center center;
-  background: ${props => props.theme.colors.panel};
   border-radius: ${props => props.theme.borderRadius.medium};
-  box-shadow: ${props => props.theme.shadows.small};
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: ${props => props.theme.shadows.medium};
   padding: ${props => props.theme.spacing.md};
 
   @media (max-width: 1024px) {
@@ -152,7 +168,7 @@ const MobileFoundWords = styled.div`
   }
 `;
 
-// Current word display with improved visibility
+// Enhanced word display
 const CurrentWordDisplay = styled.div`
   font-size: ${props => props.theme.fontSizes.xxxlarge};
   font-weight: bold;
@@ -161,10 +177,12 @@ const CurrentWordDisplay = styled.div`
   color: ${props => props.theme.colors.text};
   text-transform: uppercase;
   letter-spacing: 2px;
-  background: ${props => props.theme.colors.panel};
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
   padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.lg};
   border-radius: ${props => props.theme.borderRadius.large};
-  box-shadow: ${props => props.theme.shadows.small};
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: ${props => props.theme.shadows.medium};
   z-index: 1;
   display: flex;
   align-items: center;
@@ -172,6 +190,17 @@ const CurrentWordDisplay = styled.div`
   flex-grow: 1;
   text-align: center;
   margin-top: ${props => props.theme.spacing.sm};
+
+  /* Add glow when word is being formed */
+  ${props => {
+    if (props.children && props.children !== '···') {
+      return `
+        box-shadow: ${props.theme.shadows.glow};
+        animation: glowPulse 2s infinite;
+      `;
+    }
+    return '';
+  }}
 
   @media (max-width: 768px) {
     font-size: ${props => props.theme.fontSizes.xxlarge};

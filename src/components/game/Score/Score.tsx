@@ -8,7 +8,9 @@ const ScoreContainer = styled.div`
   color: ${props => props.theme.colors.text};
   padding: ${props => props.theme.spacing.xs} ${props => props.theme.spacing.md};
   border-radius: ${props => props.theme.borderRadius.medium};
-  background: ${props => props.theme.colors.panel};
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   box-shadow: ${props => props.theme.shadows.small};
   position: relative;
   overflow: visible;
@@ -24,32 +26,25 @@ const ScoreContainer = styled.div`
   }
 `;
 
-const flyUpAnimation = keyframes`
-  0% { opacity: 0; transform: translate(0, 100%); }
-  20% { opacity: 1; transform: translate(0, 50%); }
-  70% { opacity: 1; transform: translate(0, -20%); }
-  100% { opacity: 0; transform: translate(0, -60%); }
-`;
-
 const PointsAnimation = styled.div<{ $points: number }>`
   position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
+  left: 50%;
+  transform: translate(-50%, -50%);
   color: ${props => {
     if (props.$points > 30) return props.theme.colors.accent;
-    if (props.$points > 20) return props.theme.colors.warning;
+    if (props.$points > 20) return props.theme.colors.secondary;
     return props.theme.colors.success;
   }};
   font-weight: bold;
   font-size: ${props => {
-    if (props.$points > 30) return props.theme.fontSizes.xlarge;
-    if (props.$points > 20) return props.theme.fontSizes.large;
-    return props.theme.fontSizes.medium;
+    if (props.$points > 30) return '2.4rem';
+    if (props.$points > 20) return '2.2rem';
+    return '1.8rem';
   }};
-  animation: ${flyUpAnimation} 1.5s ease-out forwards;
-  text-shadow: 0 0 4px rgba(255, 255, 255, 0.7);
-  z-index: 100;
+  animation: scoreFloat 1.5s ease-out forwards;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+  z-index: 1000;
+  white-space: nowrap;
   pointer-events: none;
 `;
 
