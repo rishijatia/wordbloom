@@ -14,9 +14,10 @@ import {
   getTopChallengeScore,
   submitChallengeScore
 } from '../services/challengeService';
+import gameConfig from '../config/gameConfig.json';
 
 // Constants
-const GAME_TIME = 120; // 2 minutes in seconds
+const GAME_TIME = gameConfig.gameTimeSeconds; // Game time in seconds from config
 const MIN_WORD_LENGTH = 3;
 const MAX_WORD_LENGTH = 9; // Maximum word length limit
 
@@ -515,20 +516,45 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         console.log(`Creating challenge with letter arrangement:`, state.letterArrangement);
         
         // Create challenge with current letter arrangement
-        const challenge = await createChallengeService(state.letterArrangement, playerName);
+        const result = await createChallengeService(state.letterArrangement, playerName);
+        
+        // Check if there was an error (like exceeding challenge limit)
+        if ('error' in result) {
+          if (window.addNotification) {
+            window.addNotification(result.error, 'error', 3000);
+          }
+          return null;
+        }
+        
+        const challenge = result as Challenge;
         
         // Update context
         dispatch({ type: 'CREATE_CHALLENGE', challenge });
         
-        // Immediately submit score for the creator
-        await submitChallengeScore(
-          challenge.id,
-          playerName,
-          state.score,
-          state.foundWords
-        );
-        
-        console.log(`Challenge created with ID ${challenge.id} and creator score ${state.score} submitted`);
+        // Verify we have a valid challenge ID before submitting score
+        if (challenge && challenge.id) {
+          // Immediately submit score for the creator
+          const submitResult = await submitChallengeScore(
+            challenge.id,
+            playerName,
+            state.score,
+            state.foundWords
+          );
+          
+          if ('error' in submitResult) {
+            console.error('Error submitting score:', submitResult.error);
+            if (window.addNotification) {
+              window.addNotification('Challenge created but score not saved', 'info', 3000);
+            }
+          } else {
+            console.log(`Challenge created with ID ${challenge.id} and creator score ${state.score} submitted`);
+          }
+        } else {
+          console.error('Invalid challenge ID after creation');
+          if (window.addNotification) {
+            window.addNotification('Challenge created but score not saved', 'info', 3000);
+          }
+        }
         
         return challenge;
       } catch (error) {

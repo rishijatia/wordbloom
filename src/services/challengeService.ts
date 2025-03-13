@@ -1,6 +1,8 @@
 import { Challenge, ChallengeScore, ChallengePlayer } from '../models/Challenge';
 import { LetterArrangement } from '../models/LetterArrangement';
 import { db } from './firebase';
+import gameConfig from '../config/gameConfig.json';
+import { incrementChallengesCreated, hasReachedChallengeLimit, recordChallengeParticipation, getParticipatedChallenges } from './deviceChallengeService';
 import {
   collection,
   doc,
@@ -15,6 +17,7 @@ import {
   limit,
   increment,
   onSnapshot,
+  startAfter,
   DocumentReference,
   DocumentData,
   CollectionReference,
@@ -75,10 +78,19 @@ async function generateChallengeCode(): Promise<string> {
 export async function createChallenge(
   letterArrangement: LetterArrangement,
   playerName: string
-): Promise<Challenge> {
+): Promise<Challenge | { error: string }> {
   try {
+    // Check if device has reached challenge creation limit
+    const hasReachedLimit = await hasReachedChallengeLimit();
+    if (hasReachedLimit) {
+      return { error: `You've reached the limit of ${gameConfig.maxChallengesPerDevice} created challenges.` };
+    }
+    
     const deviceId = getDeviceId();
     const code = await generateChallengeCode();
+    const createdAt = Date.now();
+    // Set expiration to 24 hours after creation using config value
+    const expiresAt = createdAt + gameConfig.challengeDurationMs;
     
     // Create challenge document
     const challengeData: Omit<Challenge, 'id'> = {
@@ -86,10 +98,12 @@ export async function createChallenge(
       letterArrangement,
       createdBy: deviceId,
       createdByName: playerName,
-      createdAt: Date.now(),
+      createdAt,
+      expiresAt,
       playerCount: 1, // Start with 1 because the creator counts as the first player
-      maxPlayers: 10,
-      status: 'active'
+      maxPlayers: gameConfig.maxPlayers,
+      status: 'active',
+      totalWordsFound: 0
     };
     
     // Add to challenges collection
@@ -102,6 +116,12 @@ export async function createChallenge(
       createdAt: Date.now()
     });
     
+    // Increment the challenge count for this device
+    await incrementChallengesCreated();
+    
+    // Record participation as creator (with a score of 0 initially)
+    await recordChallengeParticipation(challengeId, 0, 'creator');
+    
     // Return the complete challenge object with the ID
     const challenge: Challenge = {
       id: challengeId,
@@ -111,7 +131,7 @@ export async function createChallenge(
     return challenge;
   } catch (error) {
     console.error('Error creating challenge:', error);
-    throw error;
+    return { error: 'Failed to create challenge. Please try again.' };
   }
 }
 
@@ -272,7 +292,7 @@ export async function submitChallengeScore(
   playerName: string,
   score: number,
   foundWords: string[]
-): Promise<{ leaderboard: ChallengeScore[]; playerRank: number }> {
+): Promise<{ leaderboard: ChallengeScore[]; playerRank: number } | { error: string }> {
   try {
     console.log(`Submitting score for challenge ${challengeId}`, { 
       playerName, 
@@ -281,7 +301,8 @@ export async function submitChallengeScore(
     });
     
     if (!challengeId) {
-      throw new Error("Challenge ID is required");
+      console.error("No challenge ID provided");
+      return { error: "Challenge ID is required", leaderboard: [], playerRank: -1 };
     }
 
     const deviceId = getDeviceId();
@@ -353,6 +374,9 @@ export async function submitChallengeScore(
     }
     
     console.log('Score submitted successfully, getting leaderboard');
+    
+    // Record this challenge participation for the device
+    await recordChallengeParticipation(challengeId, score, 'participant');
     
     // Get updated leaderboard
     const leaderboard = await getChallengeLeaderboard(challengeId);
@@ -597,6 +621,11 @@ export function parseUrlForChallengeCode(): string | null {
   return challengeCode;
 }
 
+// Check if a challenge is expired (client-side check only)
+export function isChallengeExpired(challenge: Challenge): boolean {
+  return Date.now() > challenge.expiresAt || challenge.status === 'expired';
+}
+
 // Get the top score for a challenge
 export async function getTopChallengeScore(challengeId: string): Promise<number> {
   try {
@@ -605,5 +634,318 @@ export async function getTopChallengeScore(challengeId: string): Promise<number>
   } catch (error) {
     console.error('Error getting top challenge score:', error);
     return 0;
+  }
+}
+
+// Interface for paginated results
+export interface PaginatedChallenges {
+  challenges: Challenge[];
+  lastVisible: any; // Last document for pagination cursor
+  totalCount?: number; // Optional total count info
+  hasMore: boolean; // Whether there are more records to fetch
+}
+
+// Get active challenges (challenges that haven't expired) with pagination
+export async function getActiveChallenges(
+  lastVisible: any = null, 
+  pageSize: number = 20
+): Promise<PaginatedChallenges> {
+  try {
+    const now = Date.now();
+    const challengesCollection = collection(db, CHALLENGES_COLLECTION);
+    
+    // Base query for active challenges
+    let activeQuery = query(
+      challengesCollection,
+      where('status', '==', 'active'),
+      where('expiresAt', '>', now),
+      orderBy('expiresAt', 'asc'), // Sort by expiration time ascending (soonest first)
+      limit(pageSize + 1) // Request one extra to check if there are more
+    );
+    
+    // Apply cursor if we're paginating
+    if (lastVisible) {
+      activeQuery = query(activeQuery, startAfter(lastVisible));
+    }
+    
+    const challengesSnapshot = await getDocs(activeQuery);
+    const challenges: Challenge[] = [];
+    
+    // Process all but potentially the last document (which we use to check for more)
+    const hasMore = challengesSnapshot.docs.length > pageSize;
+    const docsToProcess = hasMore ? challengesSnapshot.docs.slice(0, pageSize) : challengesSnapshot.docs;
+    
+    docsToProcess.forEach(doc => {
+      challenges.push({
+        id: doc.id,
+        ...doc.data() as Omit<Challenge, 'id'>
+      });
+    });
+    
+    // Get the last visible document for next pagination
+    const newLastVisible = docsToProcess.length > 0 ? docsToProcess[docsToProcess.length - 1] : null;
+    
+    return {
+      challenges,
+      lastVisible: newLastVisible,
+      hasMore
+    };
+  } catch (error) {
+    console.error('Error getting active challenges:', error);
+    return {
+      challenges: [],
+      lastVisible: null,
+      hasMore: false
+    };
+  }
+}
+
+// Get challenges created by the current device with pagination
+export async function getCreatedChallenges(
+  lastVisible: any = null,
+  pageSize: number = 20
+): Promise<PaginatedChallenges> {
+  try {
+    const deviceId = getDeviceId();
+    const challengesCollection = collection(db, CHALLENGES_COLLECTION);
+    
+    // Base query for challenges created by this device
+    let createdQuery = query(
+      challengesCollection,
+      where('createdBy', '==', deviceId),
+      orderBy('createdAt', 'desc'), // Sort by creation time descending (newest first)
+      limit(pageSize + 1) // Request one extra to check if there are more
+    );
+    
+    // Apply cursor if we're paginating
+    if (lastVisible) {
+      createdQuery = query(createdQuery, startAfter(lastVisible));
+    }
+    
+    const challengesSnapshot = await getDocs(createdQuery);
+    const challenges: Challenge[] = [];
+    
+    // Process all but potentially the last document (which we use to check for more)
+    const hasMore = challengesSnapshot.docs.length > pageSize;
+    const docsToProcess = hasMore ? challengesSnapshot.docs.slice(0, pageSize) : challengesSnapshot.docs;
+    
+    docsToProcess.forEach(doc => {
+      challenges.push({
+        id: doc.id,
+        ...doc.data() as Omit<Challenge, 'id'>
+      });
+    });
+    
+    // Get the last visible document for next pagination
+    const newLastVisible = docsToProcess.length > 0 ? docsToProcess[docsToProcess.length - 1] : null;
+    
+    return {
+      challenges,
+      lastVisible: newLastVisible,
+      hasMore
+    };
+  } catch (error) {
+    console.error('Error getting created challenges:', error);
+    return {
+      challenges: [],
+      lastVisible: null,
+      hasMore: false
+    };
+  }
+}
+
+// Get all of the current user's challenges (both created and participated in)
+// Only active challenges are returned
+export async function getYourChallenges(
+  lastVisible: any = null,
+  pageSize: number = 20
+): Promise<PaginatedChallenges> {
+  try {
+    // Get list of all challenge IDs user has participated in
+    const participatedList = await getParticipatedChallenges();
+    
+    if (participatedList.length === 0) {
+      return {
+        challenges: [],
+        lastVisible: null,
+        hasMore: false
+      };
+    }
+    
+    // Get IDs of the challenges
+    const challengeIds = participatedList.map(p => p.challengeId);
+    
+    // Firestore has a limit of 10 values for 'in' queries
+    // We need to fetch in batches and combine
+    const now = Date.now();
+    let allChallenges: Challenge[] = [];
+    
+    // Process in batches of 10
+    for (let i = 0; i < challengeIds.length; i += 10) {
+      const batchIds = challengeIds.slice(i, i + 10);
+      
+      if (batchIds.length === 0) continue;
+      
+      // We can only use one inequality filter in Firestore, so we'll fetch by ID
+      // and do additional filtering in memory
+      const challengesCollection = collection(db, CHALLENGES_COLLECTION);
+      const batchQuery = query(
+        challengesCollection,
+        where('__name__', 'in', batchIds)
+      );
+      
+      const batchSnapshot = await getDocs(batchQuery);
+      
+      batchSnapshot.forEach(doc => {
+        const challenge = {
+          id: doc.id,
+          ...doc.data() as Omit<Challenge, 'id'>
+        };
+        // Apply the filters in memory that we removed from the query
+        if (challenge.status === 'active' && challenge.expiresAt > now) {
+          allChallenges.push(challenge);
+        }
+      });
+    }
+    
+    // Sort by last played time
+    allChallenges.sort((a, b) => {
+      const aParticipation = participatedList.find(p => p.challengeId === a.id);
+      const bParticipation = participatedList.find(p => p.challengeId === b.id);
+      
+      if (aParticipation && bParticipation) {
+        // Sort by lastPlayed timestamp, most recent first
+        return bParticipation.lastPlayed - aParticipation.lastPlayed;
+      }
+      
+      return 0;
+    });
+    
+    // Apply pagination manually since we're not querying directly
+    let startIndex = 0;
+    if (lastVisible !== null) {
+      const lastVisibleIndex = allChallenges.findIndex(c => c.id === lastVisible.id);
+      if (lastVisibleIndex !== -1) {
+        startIndex = lastVisibleIndex + 1;
+      }
+    }
+    
+    // Slice the page we need
+    const endIndex = Math.min(startIndex + pageSize, allChallenges.length);
+    const pagedChallenges = allChallenges.slice(startIndex, endIndex);
+    const hasMore = endIndex < allChallenges.length;
+    
+    // Get the last visible document for next pagination
+    const newLastVisible = pagedChallenges.length > 0 ? pagedChallenges[pagedChallenges.length - 1] : null;
+    
+    return {
+      challenges: pagedChallenges,
+      lastVisible: newLastVisible,
+      totalCount: allChallenges.length,
+      hasMore
+    };
+  } catch (error) {
+    console.error('Error getting your challenges:', error);
+    return {
+      challenges: [],
+      lastVisible: null,
+      hasMore: false
+    };
+  }
+}
+
+// Get challenges the current device has participated in
+// With 7-day history filter and pagination support
+export async function getParticipatedChallengeDetails(
+  lastVisible: any = null,
+  pageSize: number = 20
+): Promise<PaginatedChallenges> {
+  try {
+    // Get list of participated challenge IDs from device_challenges
+    const participatedList = await getParticipatedChallenges();
+    
+    if (participatedList.length === 0) {
+      return {
+        challenges: [],
+        lastVisible: null,
+        hasMore: false
+      };
+    }
+    
+    // Calculate date 7 days ago
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const oneWeekAgoTimestamp = oneWeekAgo.getTime();
+    
+    // Get challenge details for each ID
+    let allChallenges: Challenge[] = [];
+    
+    // Batch into groups of 10 to avoid query limits
+    const batchSize = 10;
+    for (let i = 0; i < participatedList.length; i += batchSize) {
+      const batch = participatedList.slice(i, i + batchSize);
+      const batchIds = batch.map(p => p.challengeId);
+      
+      const challengesCollection = collection(db, CHALLENGES_COLLECTION);
+      // Simple query with just the document IDs to avoid Firestore query constraints
+      const batchQuery = query(
+        challengesCollection,
+        where('__name__', 'in', batchIds),
+        limit(batchSize)
+      );
+      
+      const batchSnapshot = await getDocs(batchQuery);
+      
+      batchSnapshot.forEach(doc => {
+        allChallenges.push({
+          id: doc.id,
+          ...doc.data() as Omit<Challenge, 'id'>
+        });
+      });
+    }
+    
+    // Filter to get only expired challenges from the last 7 days
+    const expiredRecentChallenges = allChallenges.filter(challenge => {
+      // Must be expired
+      const isExpired = isChallengeExpired(challenge);
+      // Expiration must be within last 7 days
+      const isRecent = challenge.expiresAt >= oneWeekAgoTimestamp;
+      
+      return isExpired && isRecent;
+    });
+    
+    // Sort by expiration date (most recently expired first)
+    expiredRecentChallenges.sort((a, b) => b.expiresAt - a.expiresAt);
+    
+    // Apply pagination manually since we're not querying directly
+    let startIndex = 0;
+    if (lastVisible !== null) {
+      const lastVisibleIndex = expiredRecentChallenges.findIndex(c => c.id === lastVisible.id);
+      if (lastVisibleIndex !== -1) {
+        startIndex = lastVisibleIndex + 1;
+      }
+    }
+    
+    // Slice the page we need
+    const endIndex = Math.min(startIndex + pageSize, expiredRecentChallenges.length);
+    const pagedChallenges = expiredRecentChallenges.slice(startIndex, endIndex);
+    const hasMore = endIndex < expiredRecentChallenges.length;
+    
+    // Get the last visible document for next pagination
+    const newLastVisible = pagedChallenges.length > 0 ? pagedChallenges[pagedChallenges.length - 1] : null;
+    
+    return {
+      challenges: pagedChallenges,
+      lastVisible: newLastVisible,
+      totalCount: expiredRecentChallenges.length,
+      hasMore
+    };
+  } catch (error) {
+    console.error('Error getting participated challenges:', error);
+    return {
+      challenges: [],
+      lastVisible: null,
+      hasMore: false
+    };
   }
 }

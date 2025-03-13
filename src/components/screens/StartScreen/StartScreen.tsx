@@ -150,7 +150,11 @@ enum StartScreenMode {
   JOIN_CHALLENGE
 }
 
-const StartScreen: React.FC = () => {
+interface StartScreenProps {
+  onViewChallenges?: () => void;
+}
+
+const StartScreen: React.FC<StartScreenProps> = ({ onViewChallenges }) => {
   const { startGame, startChallengeGame, setGameMode } = useGameContext();
   const [screenMode, setScreenMode] = useState<StartScreenMode>(StartScreenMode.MAIN);
   
@@ -226,6 +230,11 @@ const StartScreen: React.FC = () => {
         <Button $secondary onClick={() => setScreenMode(StartScreenMode.JOIN_CHALLENGE)}>
           Join Challenge
         </Button>
+        {onViewChallenges && (
+          <Button onClick={onViewChallenges}>
+            View Challenges
+          </Button>
+        )}
       </ButtonGroup>
     </StartContainer>
   );
