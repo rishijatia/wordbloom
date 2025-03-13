@@ -39,16 +39,17 @@ const DisplayContainer = styled.div<{ $invalid: boolean }>`
   margin: 10px 0;
   font-size: 1.5rem;
   font-weight: bold;
-  color: ${props => props.$invalid ? '#e74c3c' : '#2c3e50'};
+  color: ${props => props.$invalid ? props.theme.colors.danger : props.theme.colors.text};
   animation: ${props => props.$invalid ? shakeAnimation : 'none'} 0.5s ease;
   position: relative;
+  text-shadow: ${props => props.$invalid ? 'none' : '0 1px 2px rgba(0, 0, 0, 0.05)'};
 `;
 
 const ErrorMessage = styled.div`
   position: absolute;
   top: 100%;
   font-size: 1rem;
-  color: #e74c3c;
+  color: ${props => props.theme.colors.danger};
   opacity: 0.9;
   animation: ${fadeIn} 0.3s ease;
 `;
@@ -58,17 +59,18 @@ const InvalidWordPopup = styled.div<{ $disappearing: boolean }>`
   top: 15%;
   left: 50%;
   transform: translateX(-50%);
-  background-color: rgba(0, 0, 0, 0.9);
+  background-color: rgba(224, 93, 85, 0.9);
   color: white;
   padding: 16px 32px;
-  border-radius: 8px;
+  border-radius: 12px;
   font-weight: bold;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   z-index: 9999;
   white-space: nowrap;
   font-size: 20px;
   animation: ${props => props.$disappearing ? popupDisappearAnimation : popupAppearAnimation} 0.3s ease forwards;
   pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 `;
 
 const WordDisplay: React.FC = () => {
