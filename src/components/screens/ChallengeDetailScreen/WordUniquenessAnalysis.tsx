@@ -122,6 +122,28 @@ const WordUniquenessAnalysis: React.FC<WordUniquenessAnalysisProps> = ({ challen
     };
   }, []);
   
+  // Create a refresh function
+  const refreshData = async () => {
+    setLoading(true);
+    try {
+      const scores = await getChallengeLeaderboard(challengeId);
+      const words = generateWordUniquenessData(scores);
+      setWordData(words);
+      
+      // Mark as played in session storage when refreshing after playing
+      const sessionStorageKey = `played_challenge_${challengeId}`;
+      const currentPlayerScore = scores.find(score => score.deviceId === deviceId);
+      if (currentPlayerScore && currentPlayerScore.foundWords.length > 0) {
+        sessionStorage.setItem(sessionStorageKey, 'true');
+      }
+    } catch (err) {
+      console.error('Error refreshing word data:', err);
+      setError('Failed to refresh word analysis');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // Fetch word data
   useEffect(() => {
     const fetchData = async () => {
@@ -182,25 +204,30 @@ const WordUniquenessAnalysis: React.FC<WordUniquenessAnalysisProps> = ({ challen
   // Log diagnostic information
   console.log("Word Analysis - Has played?", hasPlayed, "Device ID:", deviceId);
   console.log("Unique words:", stats.uniqueCount, "Common words:", stats.commonCount);
-  
-  // Create a refresh function
-  const refreshData = async () => {
-    setLoading(true);
-    try {
-      const scores = await getChallengeLeaderboard(challengeId);
-      const words = generateWordUniquenessData(scores);
-      setWordData(words);
-      
-      // Mark as played in session storage when refreshing after playing
-      const sessionStorageKey = `played_challenge_${challengeId}`;
-      sessionStorage.setItem(sessionStorageKey, 'true');
-    } catch (err) {
-      console.error('Error refreshing word data:', err);
-      setError('Failed to refresh word analysis');
-    } finally {
-      setLoading(false);
-    }
-  };
+
+  // Check if user has played this challenge - show locked view  
+  if (!hasPlayed) {
+    return (
+      <Container>
+        <TitleRow>
+          <Title>Word Analysis</Title>
+          <RefreshButton onClick={refreshData} disabled={loading}>
+            {loading ? 'Loading...' : 'Refresh Data'}
+          </RefreshButton>
+        </TitleRow>
+        
+        <LockedContainer>
+          <LockIcon>🔒</LockIcon>
+          <LockedMessage>
+            You need to play this challenge to see the word analysis.
+          </LockedMessage>
+          <LockedSubMessage>
+            Play the challenge to unlock this analysis and see how your word findings compare to other players.
+          </LockedSubMessage>
+        </LockedContainer>
+      </Container>
+    );
+  }
 
   return (
     <Container>
@@ -212,34 +239,27 @@ const WordUniquenessAnalysis: React.FC<WordUniquenessAnalysisProps> = ({ challen
       </TitleRow>
       
       <VisualizationContainer>
-        {hasPlayed ? (
-          <SVGContainer ref={svgRef as any}>
-            <svg width="100%" height="100%" viewBox={`0 0 ${svgDimensions.width} ${svgDimensions.height}`}>
-              {/* Venn diagram-like visualization */}
-              <VennDiagram 
-                width={svgDimensions.width} 
-                height={svgDimensions.height} 
-                stats={stats}
-              />
-            </svg>
-            <LegendContainer>
-              <LegendItem color="#4CAF50">
-                <span>Words only you found ({stats.uniqueCount})</span>
-              </LegendItem>
-              <LegendItem color="#2196F3">
-                <span>Words you & others found ({stats.commonCount})</span>
-              </LegendItem>
-              <LegendItem color="#F44336">
-                <span>Words you missed ({stats.missedCount})</span>
-              </LegendItem>
-            </LegendContainer>
-          </SVGContainer>
-        ) : (
-          <NotPlayedMessage>
-            <div>You haven't played this challenge yet or your data is still loading.</div>
-            <div>Play the challenge or refresh the data to see your word analysis.</div>
-          </NotPlayedMessage>
-        )}
+        <SVGContainer ref={svgRef as any}>
+          <svg width="100%" height="100%" viewBox={`0 0 ${svgDimensions.width} ${svgDimensions.height}`}>
+            {/* Venn diagram-like visualization */}
+            <VennDiagram 
+              width={svgDimensions.width} 
+              height={svgDimensions.height} 
+              stats={stats}
+            />
+          </svg>
+          <LegendContainer>
+            <LegendItem color="#4CAF50">
+              <span>Words only you found ({stats.uniqueCount})</span>
+            </LegendItem>
+            <LegendItem color="#2196F3">
+              <span>Words you & others found ({stats.commonCount})</span>
+            </LegendItem>
+            <LegendItem color="#F44336">
+              <span>Words you missed ({stats.missedCount})</span>
+            </LegendItem>
+          </LegendContainer>
+        </SVGContainer>
       </VisualizationContainer>
       
       <ControlsContainer>
@@ -324,24 +344,42 @@ const VennDiagram: React.FC<VennDiagramProps> = ({ width, height, stats }) => {
   
   // Calculate circle sizes based on word counts
   const total = Math.max(1, stats.totalCount);
-  const uniqueRadius = 40 + (stats.uniqueCount / total) * 80;
-  const commonRadius = 40 + (stats.commonCount / total) * 80;
-  const missedRadius = 40 + (stats.missedCount / total) * 80;
   
-  // Position circles
+  // Adjust circle sizes based on counts but maintain minimum sizes for visual appeal
+  const minRadius = 60;
+  const maxRadiusAdjustment = 50;
+  
+  const uniqueRadius = minRadius + (stats.uniqueCount / total) * maxRadiusAdjustment;
+  const commonRadius = minRadius + (stats.commonCount / total) * maxRadiusAdjustment;
+  const missedRadius = minRadius + (stats.missedCount / total) * maxRadiusAdjustment;
+  
+  // Position circles with better spacing
   const centerY = height / 2;
-  const uniqueX = width * 0.25;
+  const uniqueX = width * 0.3;
   const commonX = width * 0.5;
-  const missedX = width * 0.75;
+  const missedX = width * 0.7;
   
   return (
     <g>
+      {/* Add background rectangle for better visibility */}
+      <rect
+        x={0}
+        y={0}
+        width={width}
+        height={height}
+        fill="#f8f9fa"
+        rx={8}
+        ry={8}
+      />
+      
       {/* Unique words circle - green */}
       <circle 
         cx={uniqueX} 
         cy={centerY} 
         r={uniqueRadius} 
         fill="rgba(76, 175, 80, 0.7)" 
+        stroke="rgba(76, 175, 80, 0.9)"
+        strokeWidth={2}
       />
       <text 
         x={uniqueX} 
@@ -350,6 +388,7 @@ const VennDiagram: React.FC<VennDiagramProps> = ({ width, height, stats }) => {
         dominantBaseline="middle"
         fill="white"
         fontWeight="bold"
+        fontSize={uniqueRadius > 70 ? "24px" : "20px"}
       >
         {stats.uniqueCount}
       </text>
@@ -360,6 +399,8 @@ const VennDiagram: React.FC<VennDiagramProps> = ({ width, height, stats }) => {
         cy={centerY} 
         r={commonRadius} 
         fill="rgba(33, 150, 243, 0.7)" 
+        stroke="rgba(33, 150, 243, 0.9)"
+        strokeWidth={2}
       />
       <text 
         x={commonX} 
@@ -368,6 +409,7 @@ const VennDiagram: React.FC<VennDiagramProps> = ({ width, height, stats }) => {
         dominantBaseline="middle"
         fill="white"
         fontWeight="bold"
+        fontSize={commonRadius > 70 ? "24px" : "20px"}
       >
         {stats.commonCount}
       </text>
@@ -378,6 +420,8 @@ const VennDiagram: React.FC<VennDiagramProps> = ({ width, height, stats }) => {
         cy={centerY} 
         r={missedRadius} 
         fill="rgba(244, 67, 54, 0.7)" 
+        stroke="rgba(244, 67, 54, 0.9)"
+        strokeWidth={2}
       />
       <text 
         x={missedX} 
@@ -386,34 +430,68 @@ const VennDiagram: React.FC<VennDiagramProps> = ({ width, height, stats }) => {
         dominantBaseline="middle"
         fill="white"
         fontWeight="bold"
+        fontSize={missedRadius > 70 ? "24px" : "20px"}
       >
         {stats.missedCount}
       </text>
       
-      {/* Labels */}
+      {/* Enhanced labels with background for better visibility */}
+      <rect
+        x={uniqueX - 50}
+        y={centerY + uniqueRadius + 5}
+        width={100}
+        height={20}
+        fill="rgba(255, 255, 255, 0.7)"
+        rx={4}
+        ry={4}
+      />
       <text 
         x={uniqueX} 
-        y={centerY + uniqueRadius + 20} 
+        y={centerY + uniqueRadius + 17} 
         textAnchor="middle"
         fontSize="12"
+        fontWeight="600"
+        fill="#4CAF50"
       >
         Your Unique Words
       </text>
       
+      <rect
+        x={commonX - 45}
+        y={centerY + commonRadius + 5}
+        width={90}
+        height={20}
+        fill="rgba(255, 255, 255, 0.7)"
+        rx={4}
+        ry={4}
+      />
       <text 
         x={commonX} 
-        y={centerY + commonRadius + 20} 
+        y={centerY + commonRadius + 17} 
         textAnchor="middle"
         fontSize="12"
+        fontWeight="600"
+        fill="#2196F3"
       >
         Common Words
       </text>
       
+      <rect
+        x={missedX - 45}
+        y={centerY + missedRadius + 5}
+        width={90}
+        height={20}
+        fill="rgba(255, 255, 255, 0.7)"
+        rx={4}
+        ry={4}
+      />
       <text 
         x={missedX} 
-        y={centerY + missedRadius + 20} 
+        y={centerY + missedRadius + 17} 
         textAnchor="middle"
         fontSize="12"
+        fontWeight="600"
+        fill="#F44336"
       >
         Missed Words
       </text>
@@ -486,20 +564,24 @@ const SVGContainer = styled.div`
 
 const LegendContainer = styled.div`
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
   position: absolute;
   top: 16px;
-  right: 16px;
-  background-color: rgba(255, 255, 255, 0.8);
-  padding: 8px;
-  border-radius: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   
-  @media (min-width: 768px) {
-    flex-direction: row;
-    gap: 16px;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%);
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 8px;
+    left: auto;
+    right: 16px;
+    transform: none;
   }
 `;
 
@@ -679,6 +761,40 @@ const NotPlayedMessage = styled.div`
   text-align: center;
   color: #666;
   padding: 0 24px;
+`;
+
+const LockedContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
+  padding: 40px 24px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px dashed #dee2e6;
+  margin: 20px 0;
+  min-height: 300px;
+`;
+
+const LockIcon = styled.div`
+  font-size: 48px;
+  margin-bottom: 24px;
+  color: #6c757d;
+  opacity: 0.8;
+`;
+
+const LockedMessage = styled.div`
+  font-size: 20px;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 12px;
+`;
+
+const LockedSubMessage = styled.div`
+  font-size: 16px;
+  color: #6c757d;
+  max-width: 450px;
 `;
 
 export default WordUniquenessAnalysis;

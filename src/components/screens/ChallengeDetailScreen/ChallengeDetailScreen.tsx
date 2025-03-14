@@ -19,12 +19,14 @@ interface ChallengeDetailScreenProps {
   challengeId: string;
   onBack: () => void;
   onPlay: (challenge: Challenge) => void;
+  onNavigateToShare?: (challenge: Challenge, score?: number) => void;
 }
 
 const ChallengeDetailScreen: React.FC<ChallengeDetailScreenProps> = ({ 
   challengeId, 
   onBack,
-  onPlay
+  onPlay,
+  onNavigateToShare
 }) => {
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -81,7 +83,11 @@ const ChallengeDetailScreen: React.FC<ChallengeDetailScreenProps> = ({
   };
 
   const handleShareChallenge = () => {
-    if (challenge) {
+    if (challenge && onNavigateToShare) {
+      // Use the new share screen instead of modal
+      onNavigateToShare(challenge, playerScore);
+    } else if (challenge) {
+      // Fall back to modal if navigation function not provided
       setIsShareModalOpen(true);
     }
   };
@@ -346,6 +352,7 @@ const ContentArea = styled.div`
   @media (min-width: 1024px) {
     display: flex;
     overflow: visible;
+    gap: 24px;
   }
 `;
 

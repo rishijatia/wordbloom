@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import styled from 'styled-components';
 import { LetterArrangement } from '../../../models/LetterArrangement';
 import { ChallengeScore } from '../../../models/Challenge';
 import { getChallengeLeaderboard, getDeviceId } from '../../../services/challengeService';
+import { calculateFlowerLayout } from '../../../utils/layout';
 
 interface LetterUsageHeatmapProps {
   challengeId: string;
@@ -40,6 +41,63 @@ const LetterUsageHeatmap: React.FC<LetterUsageHeatmapProps> = ({
   const [viewMode, setViewMode] = useState<'community' | 'personal'>('community');
   const deviceId = getDeviceId();
   
+  // Add this ref for the container
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Add this state for positions
+  const [hexPositions, setHexPositions] = useState<{
+    center: { x: number, y: number },
+    inner: Array<{ x: number, y: number }>,
+    outer: Array<{ x: number, y: number }>
+  }>({
+    center: { x: 50, y: 50 },
+    inner: [],
+    outer: []
+  });
+  
+  // Calculate positions using the same layout utility as the game
+  useEffect(() => {
+    if (!containerRef.current || !letterArrangement.center) return;
+    
+    const updateLayout = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      
+      // Get container dimensions
+      const rect = container.getBoundingClientRect();
+      const containerWidth = rect.width;
+      const containerHeight = rect.height;
+      
+      // Use the same layout calculator as the game
+      const { positions } = calculateFlowerLayout(
+        containerWidth, 
+        containerHeight, 
+        letterArrangement
+      );
+      
+      console.log(`Positions count: ${positions.length}`);
+      
+      // Make sure we have the right number of positions
+      const expectedCount = 1 + letterArrangement.innerRing.length + letterArrangement.outerRing.length;
+      if (positions.length !== expectedCount) {
+        console.error(`Position count mismatch: have ${positions.length}, expected ${expectedCount}`);
+      }
+      
+      // Extract positions for each tier
+      setHexPositions({
+        center: positions[0],
+        inner: positions.slice(1, 1 + letterArrangement.innerRing.length),
+        outer: positions.slice(1 + letterArrangement.innerRing.length)
+      });
+    };
+    
+    updateLayout();
+    
+    // Update layout on window resize
+    window.addEventListener('resize', updateLayout);
+    return () => window.removeEventListener('resize', updateLayout);
+  }, [letterArrangement]);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -186,6 +244,24 @@ const LetterUsageHeatmap: React.FC<LetterUsageHeatmapProps> = ({
     return <ErrorState>{error}</ErrorState>;
   }
   
+  // Check if user has played this challenge - should show locked view for any view mode
+  if (!hasPlayed) {
+    return (
+      <Container>
+        <Title>Letter Usage Heatmap</Title>
+        <LockedContainer>
+          <LockIcon>🔒</LockIcon>
+          <LockedMessage>
+            You need to play this challenge to see the letter usage heatmap.
+          </LockedMessage>
+          <LockedSubMessage>
+            Play the challenge to unlock this analysis and see which letters are used most frequently.
+          </LockedSubMessage>
+        </LockedContainer>
+      </Container>
+    );
+  }
+  
   return (
     <Container>
       <Title>Letter Usage Heatmap</Title>
@@ -226,47 +302,93 @@ const LetterUsageHeatmap: React.FC<LetterUsageHeatmapProps> = ({
         </NotPlayedMessage>
       ) : (
         <HeatmapContainer>
-          <FlowerHeatmap>
+          <FlowerHeatmap ref={containerRef}>
             {/* Center hex */}
-            <CenterHex>
-              <HexContent 
-                heatLevel={letterUsageData[0].heatLevel}
-                style={{ backgroundColor: getHeatColor(letterUsageData[0].heatLevel) }}
-              >
-                <Letter>{letterUsageData[0].letter}</Letter>
-                <Count>{letterUsageData[0].count}</Count>
-              </HexContent>
-            </CenterHex>
+            <HexContainer
+              style={{
+                position: 'absolute',
+                left: `${hexPositions.center.x}%`,
+                top: `${hexPositions.center.y}%`,
+                transform: 'translate(-50%, -50%)',
+                zIndex: 3
+              }}
+            >
+              <CenterHex>
+                <HexContent 
+                  style={{ backgroundColor: getHeatColor(letterUsageData[0].heatLevel) }}
+                >
+                  <Letter>{letterUsageData[0].letter}</Letter>
+                  <Count>{letterUsageData[0].count}</Count>
+                </HexContent>
+              </CenterHex>
+            </HexContainer>
             
             {/* Inner ring */}
-            <InnerRing>
-              {letterUsageData.slice(1, 7).map((letterData, index) => (
-                <Hex key={index}>
-                  <HexContent 
-                    heatLevel={letterData.heatLevel}
-                    style={{ backgroundColor: getHeatColor(letterData.heatLevel) }}
-                  >
-                    <Letter>{letterData.letter}</Letter>
-                    <Count>{letterData.count}</Count>
-                  </HexContent>
-                </Hex>
-              ))}
-            </InnerRing>
+            {letterUsageData.slice(1, 1 + letterArrangement.innerRing.length).map((letterData, index) => {
+              const position = hexPositions.inner[index] || { x: 0, y: 0 };
+              return (
+                <HexContainer
+                  key={`inner-${index}`}
+                  style={{
+                    position: 'absolute',
+                    left: `${position.x}%`,
+                    top: `${position.y}%`,
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 2
+                  }}
+                >
+                  <Hex>
+                    <HexContent 
+                      style={{ backgroundColor: getHeatColor(letterData.heatLevel) }}
+                    >
+                      <Letter>{letterData.letter}</Letter>
+                      <Count>{letterData.count}</Count>
+                    </HexContent>
+                  </Hex>
+                </HexContainer>
+              );
+            })}
 
             {/* Outer ring */}
-            <OuterRing>
-              {letterUsageData.slice(7, 19).map((letterData, index) => (
-                <OuterHex key={index}>
-                  <HexContent 
-                    heatLevel={letterData.heatLevel}
-                    style={{ backgroundColor: getHeatColor(letterData.heatLevel) }}
-                  >
-                    <Letter className="small">{letterData.letter}</Letter>
-                    <Count className="small">{letterData.count}</Count>
-                  </HexContent>
-                </OuterHex>
-              ))}
-            </OuterRing>
+            {letterUsageData.slice(1 + letterArrangement.innerRing.length).map((letterData, index) => {
+              const position = hexPositions.outer[index] || { x: 0, y: 0 };
+              return (
+                <HexContainer
+                  key={`outer-${index}`}
+                  style={{
+                    position: 'absolute',
+                    left: `${position.x}%`,
+                    top: `${position.y}%`,
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 1
+                  }}
+                >
+                  <OuterHex>
+                    <HexContent 
+                      style={{ backgroundColor: getHeatColor(letterData.heatLevel) }}
+                    >
+                      <Letter className="small">{letterData.letter}</Letter>
+                      <Count className="small">{letterData.count}</Count>
+                    </HexContent>
+                  </OuterHex>
+                </HexContainer>
+              );
+            })}
+            
+            {/* Error handling for position count mismatch */}
+            {hexPositions.outer.length !== letterArrangement.outerRing.length && (
+              <div style={{
+                position: 'absolute',
+                bottom: '-40px',
+                left: '0',
+                width: '100%',
+                textAlign: 'center',
+                color: '#dc3545',
+                fontSize: '12px'
+              }}>
+                Layout inconsistency detected. Please refresh the page.
+              </div>
+            )}
           </FlowerHeatmap>
           
           <StatsContainer>
@@ -440,70 +562,29 @@ const FlowerHeatmap = styled.div`
   }
 `;
 
+const HexContainer = styled.div`
+  /* This is a wrapper for positioning, actual styling is in the child components */
+`;
+
 const CenterHex = styled.div`
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   width: 80px;
   height: 92px;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  z-index: 2;
-`;
-
-const InnerRing = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-`;
-
-const OuterRing = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
 `;
 
 const Hex = styled.div`
-  position: absolute;
   width: 60px;
   height: 69px;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  
-  /* Position each hex of the inner ring */
-  &:nth-child(1) { top: 20%; left: 50%; transform: translate(-50%, 0); }
-  &:nth-child(2) { top: 35%; left: 76%; transform: translate(-50%, 0); }
-  &:nth-child(3) { top: 65%; left: 76%; transform: translate(-50%, 0); }
-  &:nth-child(4) { top: 80%; left: 50%; transform: translate(-50%, 0); }
-  &:nth-child(5) { top: 65%; left: 24%; transform: translate(-50%, 0); }
-  &:nth-child(6) { top: 35%; left: 24%; transform: translate(-50%, 0); }
 `;
 
 const OuterHex = styled.div`
-  position: absolute;
   width: 50px;
   height: 58px;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  
-  /* Position each hex of the outer ring - 12 positions */
-  &:nth-child(1) { top: 10%; left: 50%; transform: translate(-50%, 0); }
-  &:nth-child(2) { top: 18%; left: 67%; transform: translate(-50%, 0); }
-  &:nth-child(3) { top: 31%; left: 83%; transform: translate(-50%, 0); }
-  &:nth-child(4) { top: 50%; left: 90%; transform: translate(-50%, 0); }
-  &:nth-child(5) { top: 69%; left: 83%; transform: translate(-50%, 0); }
-  &:nth-child(6) { top: 82%; left: 67%; transform: translate(-50%, 0); }
-  &:nth-child(7) { top: 90%; left: 50%; transform: translate(-50%, 0); }
-  &:nth-child(8) { top: 82%; left: 33%; transform: translate(-50%, 0); }
-  &:nth-child(9) { top: 69%; left: 17%; transform: translate(-50%, 0); }
-  &:nth-child(10) { top: 50%; left: 10%; transform: translate(-50%, 0); }
-  &:nth-child(11) { top: 31%; left: 17%; transform: translate(-50%, 0); }
-  &:nth-child(12) { top: 18%; left: 33%; transform: translate(-50%, 0); }
 `;
 
-const HexContent = styled.div<{ heatLevel: number }>`
+const HexContent = styled.div`
   width: 100%;
   height: 100%;
   display: flex;
@@ -659,6 +740,40 @@ const NotPlayedMessage = styled.div`
   background-color: #f8f9fa;
   border-radius: 8px;
   margin-bottom: 24px;
+`;
+
+const LockedContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
+  padding: 40px 24px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px dashed #dee2e6;
+  margin: 20px 0;
+  min-height: 300px;
+`;
+
+const LockIcon = styled.div`
+  font-size: 48px;
+  margin-bottom: 24px;
+  color: #6c757d;
+  opacity: 0.8;
+`;
+
+const LockedMessage = styled.div`
+  font-size: 20px;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 12px;
+`;
+
+const LockedSubMessage = styled.div`
+  font-size: 16px;
+  color: #6c757d;
+  max-width: 450px;
 `;
 
 export default LetterUsageHeatmap;

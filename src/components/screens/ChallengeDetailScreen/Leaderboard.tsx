@@ -154,16 +154,25 @@ const TableContainer = styled.div`
   margin-bottom: 24px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
+  
+  @media (min-width: 1024px) {
+    max-width: 100%;
+    width: 100%;
+  }
 `;
 
 const LeaderboardTable = styled.table`
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   
   th, td {
     padding: 12px;
     text-align: left;
     border-bottom: 1px solid #eee;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   
   th {
@@ -175,28 +184,40 @@ const LeaderboardTable = styled.table`
   }
   
   .rank {
-    width: 60px;
+    width: 50px;
     text-align: center;
   }
   
   .player {
+    width: 30%;
     min-width: 120px;
   }
   
   .score {
-    width: 80px;
+    width: 70px;
     text-align: center;
     font-weight: 600;
   }
   
   .words {
-    width: 80px;
+    width: 70px;
     text-align: center;
   }
   
   .best-word {
     min-width: 100px;
+    width: 30%;
     font-style: italic;
+  }
+  
+  @media (max-width: 768px) {
+    .player {
+      width: 40%;
+    }
+    
+    .best-word {
+      width: 20%;
+    }
   }
 `;
 

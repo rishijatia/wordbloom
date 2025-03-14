@@ -131,9 +131,10 @@ enum GameOverMode {
 interface GameOverScreenProps {
   onViewChallenges?: () => void;
   onViewChallengeDetails?: (challenge: Challenge) => void;
+  onNavigateToShare?: (challenge: Challenge, score: number) => void;
 }
 
-const GameOverScreen: React.FC<GameOverScreenProps> = ({ onViewChallenges, onViewChallengeDetails }) => {
+const GameOverScreen: React.FC<GameOverScreenProps> = ({ onViewChallenges, onViewChallengeDetails, onNavigateToShare }) => {
   const { state, startGame, startChallengeGame, createChallenge } = useGameContext();
   const { score, foundWords, stats, gameMode, activeChallenge } = state;
   const [screenMode, setScreenMode] = useState<GameOverMode>(
@@ -240,7 +241,13 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onViewChallenges, onVie
   };
   
   const handleShareChallenge = () => {
-    setIsShareModalOpen(true);
+    if (activeChallenge && onNavigateToShare) {
+      // Use the new share screen
+      onNavigateToShare(activeChallenge, score);
+    } else if (activeChallenge) {
+      // Fallback to modal
+      setIsShareModalOpen(true);
+    }
   };
   
   const handleViewChallengeDetails = () => {
@@ -344,7 +351,8 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onViewChallenges, onVie
         )}
       </ButtonGroup>
       
-      {activeChallenge && (
+      {/* ShareModal has been replaced with the full-page share screen */}
+      {activeChallenge && isShareModalOpen && (
         <ShareModal
           challenge={activeChallenge}
           playerScore={score}

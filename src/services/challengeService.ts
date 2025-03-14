@@ -778,7 +778,7 @@ export async function getYourChallenges(
     // Firestore has a limit of 10 values for 'in' queries
     // We need to fetch in batches and combine
     const now = Date.now();
-    let allChallenges: Challenge[] = [];
+    const allChallenges: Challenge[] = [];
     
     // Process in batches of 10
     for (let i = 0; i < challengeIds.length; i += 10) {
@@ -878,7 +878,7 @@ export async function getParticipatedChallengeDetails(
     const oneWeekAgoTimestamp = oneWeekAgo.getTime();
     
     // Get challenge details for each ID
-    let allChallenges: Challenge[] = [];
+    const allChallenges: Challenge[] = [];
     
     // Batch into groups of 10 to avoid query limits
     const batchSize = 10;

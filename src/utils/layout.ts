@@ -105,6 +105,9 @@ export function calculateFlowerLayout(
   
   console.log(`Created ${positions.length} positions (expected ${1 + innerCount + outerCount})`);
   console.log(`Created ${outerIndices.length} outer hexagons`);
+  console.log(`Inner ring count: ${innerCount}, Outer ring count: ${outerCount}`);
+  console.log(`letterArrangement inner ring length: ${letterArrangement.innerRing.length}`);
+  console.log(`letterArrangement outer ring length: ${letterArrangement.outerRing.length}`);
   
   return { positions, connections };
 }
