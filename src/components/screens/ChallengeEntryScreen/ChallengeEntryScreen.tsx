@@ -120,10 +120,16 @@ const PlayButton = styled(Button)`
   margin-top: 10px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: all 0.3s;
+  cursor: pointer;
   
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 `;
 
@@ -347,15 +353,45 @@ const ChallengeEntryScreen: React.FC<ChallengeEntryScreenProps> = ({
   };
   
   const handleJoin = async () => {
-    if (!challengeFound) return;
+    // Get the challenge to join - either from the found challenge or direct prop
+    const challengeToJoin = challenge || challengeFound;
+    
+    if (!challengeToJoin) {
+      console.error('No challenge available to join');
+      setError('No challenge found to join');
+      return;
+    }
     
     setLoading(true);
     
     try {
+      // Always save the player name for future use
       savePlayerName(playerName);
       
-      // Update player count in the challenge
-      const result = await joinChallenge(challengeFound.code, playerName);
+      // Special handling for direct challenge mode (from shareable link)
+      if (challenge) {
+        console.log("Handling direct challenge from props:", challenge.code);
+        
+        // Start immediate join for better user experience
+        onJoinChallenge(challenge);
+        
+        // Still update the player count in the background
+        joinChallenge(challenge.code, playerName)
+          .then(result => {
+            if (result.error) {
+              console.error("Background join error:", result.error);
+            }
+          })
+          .catch(err => {
+            console.error("Background join error:", err);
+          });
+        
+        return; // Exit early, we've already started the game
+      }
+      
+      // Normal flow for challenge code entry
+      console.log("Joining challenge via API:", challengeToJoin.code);
+      const result = await joinChallenge(challengeToJoin.code, playerName);
       
       if (result.error) {
         setError(result.error);
@@ -377,6 +413,13 @@ const ChallengeEntryScreen: React.FC<ChallengeEntryScreenProps> = ({
     const displayChallenge = challenge || challengeFound;
     
     if (!displayChallenge) return null; // Safeguard against undefined challenge
+    
+    // Debug info to help diagnose the issue
+    console.log("Displaying challenge:", {
+      hasDirectChallenge: !!challenge,
+      hasFoundChallenge: !!challengeFound,
+      displayChallengeCode: displayChallenge.code
+    });
     
     return (
       <EntryContainer>
@@ -438,7 +481,10 @@ const ChallengeEntryScreen: React.FC<ChallengeEntryScreenProps> = ({
         <PlayButton 
           $primary 
           disabled={loading} 
-          onClick={handleJoin}
+          onClick={(e) => {
+            console.log("Play button clicked", e);
+            handleJoin();
+          }}
         >
           Play Challenge Now
         </PlayButton>
