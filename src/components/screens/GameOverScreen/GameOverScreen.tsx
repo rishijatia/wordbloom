@@ -130,9 +130,10 @@ enum GameOverMode {
 
 interface GameOverScreenProps {
   onViewChallenges?: () => void;
+  onViewChallengeDetails?: (challenge: Challenge) => void;
 }
 
-const GameOverScreen: React.FC<GameOverScreenProps> = ({ onViewChallenges }) => {
+const GameOverScreen: React.FC<GameOverScreenProps> = ({ onViewChallenges, onViewChallengeDetails }) => {
   const { state, startGame, startChallengeGame, createChallenge } = useGameContext();
   const { score, foundWords, stats, gameMode, activeChallenge } = state;
   const [screenMode, setScreenMode] = useState<GameOverMode>(
@@ -242,6 +243,12 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onViewChallenges }) => 
     setIsShareModalOpen(true);
   };
   
+  const handleViewChallengeDetails = () => {
+    if (activeChallenge && onViewChallengeDetails) {
+      onViewChallengeDetails(activeChallenge);
+    }
+  };
+  
   // Challenge Creation Screen
   if (screenMode === GameOverMode.CREATE_CHALLENGE) {
     return (
@@ -275,6 +282,7 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onViewChallenges }) => 
         onPlayAgain={handlePlayAgainChallenge}
         onNewChallenge={handlePlayAgain}
         onBackToHome={() => startGame()} // This is a bit of a hack to reset
+        onViewDetails={onViewChallengeDetails ? () => onViewChallengeDetails(activeChallenge) : undefined}
       />
     );
   }
@@ -322,6 +330,11 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onViewChallenges }) => 
         {onViewChallenges && (
           <Button onClick={onViewChallenges}>
             View Challenges
+          </Button>
+        )}
+        {activeChallenge && onViewChallengeDetails && (
+          <Button onClick={handleViewChallengeDetails}>
+            View Results
           </Button>
         )}
         {activeChallenge && (
