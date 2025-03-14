@@ -8,6 +8,8 @@ import GameScreen from './components/screens/GameScreen/GameScreen';
 import GameOverScreen from './components/screens/GameOverScreen/GameOverScreen';
 import ChallengeDashboardScreen from './components/screens/ChallengeDashboardScreen';
 import ChallengeDetailScreen from './components/screens/ChallengeDetailScreen';
+import ChallengeEntryScreen from './components/screens/ChallengeEntryScreen';
+import ChallengeShareScreen from './components/screens/ChallengeShareScreen';
 import NotificationManager from './components/game/Notification/NotificationManager';
 import { Challenge } from './models/Challenge';
 
@@ -19,7 +21,7 @@ const AppContainer = styled.div`
   min-height: 100vh;
 `;
 
-type AppScreen = 'game' | 'dashboard' | 'detail' | 'loading' | 'error';
+type AppScreen = 'game' | 'dashboard' | 'detail' | 'loading' | 'error' | 'entry' | 'share';
 
 const GameContent: React.FC = () => {
   const { state, startChallengeGame } = useGameContext();
@@ -28,6 +30,7 @@ const GameContent: React.FC = () => {
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
   const [deepLinkError, setDeepLinkError] = useState<string | null>(null);
   const [isProcessingDeepLink, setIsProcessingDeepLink] = useState<boolean>(true);
+  const [sharedScore, setSharedScore] = useState<number | undefined>(undefined);
   
   // Process deep links on initial load
   React.useEffect(() => {
@@ -46,8 +49,8 @@ const GameContent: React.FC = () => {
             setDeepLinkError(`Challenge ${challenge.code} has expired. Challenges are available for 24 hours after creation.`);
             setCurrentScreen('error');
           } else {
-            // If we have a valid challenge from URL, navigate to challenge detail
-            setCurrentScreen('detail');
+            // Instead of going to challenge detail, show the entry screen
+            setCurrentScreen('entry');
           }
           
           // Update URL to remove parameters after processing
@@ -133,6 +136,12 @@ const GameContent: React.FC = () => {
     handleNavigateToGame();
   };
   
+  const handleNavigateToShare = (challenge: Challenge, score?: number) => {
+    setSelectedChallenge(challenge);
+    setSharedScore(score);
+    setCurrentScreen('share');
+  };
+  
   // Render loading screen while processing deep links
   if (currentScreen === 'loading') {
     return (
@@ -196,6 +205,7 @@ const GameContent: React.FC = () => {
           <GameOverScreen 
             onViewChallenges={handleNavigateToDashboard}
             onViewChallengeDetails={handleNavigateToDetail}
+            onNavigateToShare={handleNavigateToShare}
           />
         )}
       </>
@@ -210,6 +220,35 @@ const GameContent: React.FC = () => {
         onPlayChallenge={handlePlayChallenge}
         onNavigateToCreate={handleNavigateToGame}
         onBack={handleNavigateToGame}
+      />
+    );
+  }
+  
+  // Render the challenge entry screen
+  if (currentScreen === 'entry' && selectedChallenge) {
+    return (
+      <ChallengeEntryScreen
+        challenge={selectedChallenge}
+        onCancel={handleNavigateToGame}
+        onJoinChallenge={handlePlayChallenge}
+      />
+    );
+  }
+  
+  // Render the share challenge screen
+  if (currentScreen === 'share' && selectedChallenge) {
+    return (
+      <ChallengeShareScreen
+        challenge={selectedChallenge}
+        playerScore={sharedScore}
+        onBack={() => {
+          // Navigate back based on context
+          if (state.gameStatus === 'gameOver') {
+            setCurrentScreen('game');
+          } else {
+            setCurrentScreen('detail');
+          }
+        }}
       />
     );
   }
@@ -233,6 +272,7 @@ const GameContent: React.FC = () => {
         challengeId={selectedChallenge.id}
         onBack={handleBackNavigation}
         onPlay={(challenge) => handlePlayChallenge(challenge || selectedChallenge)}
+        onNavigateToShare={handleNavigateToShare}
       />
     );
   }

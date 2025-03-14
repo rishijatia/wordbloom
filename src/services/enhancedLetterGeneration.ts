@@ -453,7 +453,7 @@ function optimizeLetterPositions(arrangement: LetterArrangement): LetterArrangem
   const { center, innerRing, outerRing } = arrangement;
   
   // Create optimized inner ring
-  let optimizedInnerRing = [...innerRing];
+  const optimizedInnerRing = [...innerRing];
   
   // If center is R, place E in the first position of inner ring for RE- prefix
   if (center === 'R' && innerRing.includes('E')) {

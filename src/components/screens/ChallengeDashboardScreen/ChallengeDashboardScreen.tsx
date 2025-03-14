@@ -41,6 +41,8 @@ const Header = styled.div`
   flex-direction: column;
   align-items: center;
   margin-bottom: 24px;
+  width: 100%;
+  position: relative;
   
   @media (min-width: 768px) {
     margin-bottom: 36px;
@@ -225,6 +227,33 @@ const TabLabel = styled.span`
   @media (max-width: 480px) {
     font-size: 12px;
     display: block;
+  }
+`;
+
+const BackButton = styled.button`
+  position: absolute;
+  left: 0;
+  top: 10px;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  color: #4f46e5;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: rgba(79, 70, 229, 0.1);
+    transform: translateX(-2px);
+  }
+  
+  @media (min-width: 768px) {
+    top: 20px;
+    font-size: 18px;
   }
 `;
 
@@ -492,6 +521,7 @@ const ChallengeDashboardScreen: React.FC<ChallengeDashboardScreenProps> = ({
   return (
     <Container>
       <Header>
+        <BackButton onClick={onBack}>← Home</BackButton>
         <Title>Challenges</Title>
         <TabContainer>
           <Tab 

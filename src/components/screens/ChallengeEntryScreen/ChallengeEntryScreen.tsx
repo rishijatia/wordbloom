@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { IoArrowBack } from 'react-icons/io5';
 import { 
   getPlayerName, 
   savePlayerName, 
@@ -8,6 +9,7 @@ import {
   parseUrlForChallengeCode
 } from '../../../services/challengeService';
 import { Challenge } from '../../../models/Challenge';
+import WordleStyleGrid from '../../WordleStyleGrid';
 
 const EntryContainer = styled.div`
   display: flex;
@@ -21,6 +23,29 @@ const EntryContainer = styled.div`
   max-width: 600px;
   margin: 0 auto;
   gap: 30px;
+  position: relative;
+`;
+
+const BackButton = styled.button`
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #555;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border-radius: 50%;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: #f0f0f0;
+    color: #333;
+  }
 `;
 
 const Title = styled.h1`
@@ -89,6 +114,19 @@ const Button = styled.button<{ $primary?: boolean }>`
   }
 `;
 
+const PlayButton = styled(Button)`
+  padding: 16px 32px;
+  font-size: 1.4rem;
+  margin-top: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+  }
+`;
+
 const ErrorMessage = styled.div`
   color: #e53935;
   font-size: 1rem;
@@ -101,12 +139,162 @@ const LoadingMessage = styled.div`
   margin: 20px 0;
 `;
 
+const InstructionsSection = styled.div`
+  width: 100%;
+  text-align: center;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+`;
+
+const RulesContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+`;
+
+const RulesTitle = styled.h2`
+  font-size: 1.4rem;
+  color: #333;
+  margin: 0;
+`;
+
+const RulesList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+`;
+
+const Rule = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #495057;
+  font-size: 1.1rem;
+
+  &::before {
+    content: "•";
+    color: #5ac476;
+  }
+`;
+
+const ControlsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  width: 100%;
+`;
+
+const ControlsColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+`;
+
+const ColumnTitle = styled.h3`
+  font-size: 1.2rem;
+  color: #333;
+  margin: 0;
+`;
+
+const ControlsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+`;
+
+const Control = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #495057;
+
+  &::before {
+    content: "•";
+    color: #5ac476;
+  }
+`;
+
+const ChallengeInfo = styled.div`
+  text-align: center;
+  padding: 15px;
+  background: #f0f8ff;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  border: 1px solid #d1e3ff;
+  
+  p {
+    margin: 5px 0;
+    font-size: 1.1rem;
+    &:first-child {
+      font-weight: bold;
+      color: #4f46e5;
+    }
+  }
+`;
+
+const WordleStyleGridContainer = styled.div`
+  margin: 20px 0;
+  background-color: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e6e6e6;
+`;
+
+const GameRulesSection = styled.div`
+  width: 100%;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+`;
+
+const RulesHeader = styled.h3`
+  font-size: 1.4rem;
+  color: #333;
+  margin: 0 0 15px 0;
+  text-align: center;
+`;
+
+// Style definitions for rule items in the game rules section 
+const RuleItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+`;
+
+const RuleIcon = styled.div`
+  font-size: 1.5rem;
+`;
+
+// Define RuleText for consistency with existing component names
+const RuleText = styled.div`
+  font-size: 1.1rem;
+  color: #495057;
+`;
+
 interface ChallengeEntryScreenProps {
+  challenge?: Challenge; // Now optional, as it can be provided or searched
   onCancel: () => void;
   onJoinChallenge: (challenge: Challenge) => void;
 }
 
 const ChallengeEntryScreen: React.FC<ChallengeEntryScreenProps> = ({
+  challenge,
   onCancel,
   onJoinChallenge
 }) => {
@@ -115,6 +303,7 @@ const ChallengeEntryScreen: React.FC<ChallengeEntryScreenProps> = ({
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [challengeFound, setChallengeFound] = useState<Challenge | null>(null);
+  const [isShareableLink, setIsShareableLink] = useState(false);
   
   // Check URL for challenge code on mount
   useEffect(() => {
@@ -122,6 +311,7 @@ const ChallengeEntryScreen: React.FC<ChallengeEntryScreenProps> = ({
     if (urlChallengeCode) {
       setChallengeCode(urlChallengeCode);
       handleCheckChallenge(urlChallengeCode);
+      setIsShareableLink(true);
     }
   }, []);
   
@@ -182,10 +372,130 @@ const ChallengeEntryScreen: React.FC<ChallengeEntryScreenProps> = ({
     }
   };
   
+  // Simplified view when accessed from a shareable link
+  if ((isShareableLink && challengeFound) || challenge) {
+    const displayChallenge = challenge || challengeFound;
+    
+    if (!displayChallenge) return null; // Safeguard against undefined challenge
+    
+    return (
+      <EntryContainer>
+        <BackButton onClick={onCancel}>
+          <IoArrowBack />
+        </BackButton>
+        
+        <Title>WordBloom Challenge</Title>
+        <Subtitle>You've been invited to play!</Subtitle>
+        
+        {/* Add Wordle-style grid visualization */}
+        <WordleStyleGridContainer>
+          <WordleStyleGrid letterArrangement={displayChallenge.letterArrangement} />
+        </WordleStyleGridContainer>
+        
+        <ChallengeInfo>
+          <p>Challenge by: {displayChallenge.createdByName}</p>
+          <p>Players: {displayChallenge.playerCount}/{displayChallenge.maxPlayers}</p>
+          <p>Code: {displayChallenge.code}</p>
+        </ChallengeInfo>
+        
+        <FormGroup>
+          <Label htmlFor="playerName">Your Name</Label>
+          <Input
+            id="playerName"
+            type="text"
+            value={playerName}
+            onChange={(e) => setPlayerName(e.target.value)}
+            placeholder="Enter your name"
+            maxLength={20}
+          />
+        </FormGroup>
+        
+        <GameRulesSection>
+          <RulesHeader>How to Play WordBloom</RulesHeader>
+          <RulesContainer>
+            <RuleItem>
+              <RuleIcon>🌸</RuleIcon>
+              <RuleText>Form words using connected letters</RuleText>
+            </RuleItem>
+            <RuleItem>
+              <RuleIcon>⭐</RuleIcon>
+              <RuleText>Center letter must be used in every word</RuleText>
+            </RuleItem>
+            <RuleItem>
+              <RuleIcon>📏</RuleIcon>
+              <RuleText>Words must be 3-9 letters long</RuleText>
+            </RuleItem>
+            <RuleItem>
+              <RuleIcon>⏱️</RuleIcon>
+              <RuleText>You have 2 minutes to find as many words as possible</RuleText>
+            </RuleItem>
+          </RulesContainer>
+        </GameRulesSection>
+        
+        {error && <ErrorMessage>{error}</ErrorMessage>}
+        {loading && <LoadingMessage>Joining challenge...</LoadingMessage>}
+        
+        <PlayButton 
+          $primary 
+          disabled={loading} 
+          onClick={handleJoin}
+        >
+          Play Challenge Now
+        </PlayButton>
+        
+        <Button onClick={onCancel}>Not Now</Button>
+      </EntryContainer>
+    );
+  }
+  
+  // Standard view for manual code entry
   return (
     <EntryContainer>
+      <BackButton onClick={onCancel}>
+        ← Back
+      </BackButton>
+      
       <Title>Join Challenge</Title>
       <Subtitle>Enter a challenge code to play</Subtitle>
+      
+      <InstructionsSection>
+        <RulesContainer>
+          <RulesTitle>Game Rules</RulesTitle>
+          <RulesList>
+            <Rule>Must use center letter</Rule>
+            <Rule>Words must be 3-9 letters</Rule>
+            <Rule>Use only connected letters</Rule>
+          </RulesList>
+        </RulesContainer>
+
+        <ControlsGrid>
+          <ControlsColumn>
+            <ColumnTitle>PC Controls</ColumnTitle>
+            <ControlsList>
+              <Control>Type letters to select</Control>
+              <Control>Enter to submit</Control>
+              <Control>Backspace to clear</Control>
+            </ControlsList>
+          </ControlsColumn>
+
+          <ControlsColumn>
+            <ColumnTitle>Mobile Controls</ColumnTitle>
+            <ControlsList>
+              <Control>Drag to select letters</Control>
+              <Control>Release to submit</Control>
+            </ControlsList>
+          </ControlsColumn>
+        </ControlsGrid>
+      </InstructionsSection>
+      
+      {loading && <LoadingMessage>Checking challenge code...</LoadingMessage>}
+      
+      {challengeFound && (
+        <div>
+          <p>Challenge by: {challengeFound.createdByName}</p>
+          <p>Players: {challengeFound.playerCount}/{challengeFound.maxPlayers}</p>
+        </div>
+      )}
       
       <FormGroup>
         <Label htmlFor="challengeCode">Challenge Code</Label>
@@ -220,15 +530,6 @@ const ChallengeEntryScreen: React.FC<ChallengeEntryScreenProps> = ({
           maxLength={20}
         />
       </FormGroup>
-      
-      {loading && <LoadingMessage>Checking challenge code...</LoadingMessage>}
-      
-      {challengeFound && (
-        <div>
-          <p>Challenge by: {challengeFound.createdByName}</p>
-          <p>Players: {challengeFound.playerCount}/{challengeFound.maxPlayers}</p>
-        </div>
-      )}
       
       <ButtonGroup>
         <Button onClick={onCancel}>Cancel</Button>
