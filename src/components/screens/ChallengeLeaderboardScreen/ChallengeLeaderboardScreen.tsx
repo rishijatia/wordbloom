@@ -281,6 +281,7 @@ interface ChallengeLeaderboardScreenProps {
   onPlayAgain: () => void;
   onNewChallenge: () => void;
   onBackToHome: () => void;
+  onViewDetails?: () => void;
 }
 
 const ChallengeLeaderboardScreen: React.FC<ChallengeLeaderboardScreenProps> = ({
@@ -289,7 +290,8 @@ const ChallengeLeaderboardScreen: React.FC<ChallengeLeaderboardScreenProps> = ({
   foundWords,
   onPlayAgain,
   onNewChallenge,
-  onBackToHome
+  onBackToHome,
+  onViewDetails
 }) => {
   const [leaderboard, setLeaderboard] = useState<ChallengeScore[]>([]);
   const [updatedChallenge, setUpdatedChallenge] = useState<Challenge>(challenge);
@@ -512,6 +514,11 @@ const ChallengeLeaderboardScreen: React.FC<ChallengeLeaderboardScreenProps> = ({
         <Button $primary onClick={onPlayAgain}>
           Play Again
         </Button>
+        {onViewDetails && (
+          <Button $secondary onClick={onViewDetails}>
+            View Detailed Results
+          </Button>
+        )}
         <Button onClick={onNewChallenge}>
           Create New Challenge
         </Button>
