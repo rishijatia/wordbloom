@@ -32,8 +32,7 @@ const Tag = styled.div<{$type: 'popular' | 'expiring'}>`
 `;
 
 const Card = styled.div<{$popular?: boolean; $expiringSoon?: boolean}>`
-  display: flex;
-  flex-direction: column;
+  /* Existing styles... */
   background-color: ${props => {
     if (props.$popular && props.$expiringSoon) return '#fff5f5';
     if (props.$popular) return '#f9f7ff';
@@ -47,9 +46,16 @@ const Card = styled.div<{$popular?: boolean; $expiringSoon?: boolean}>`
     if (props.$expiringSoon) return '0 4px 20px rgba(239, 68, 68, 0.15)';
     return '0 4px 6px rgba(0, 0, 0, 0.1)';
   }};
-  overflow: hidden;
+  
+  /* ADD these properties */
+  min-height: 350px; /* Ensure consistent card height */
+  display: flex;
+  flex-direction: column;
+  
+  /* ENSURE content stays within boundaries */
+  overflow: visible; /* Change from 'hidden' to 'visible' */
+  
   transition: transform 0.2s, box-shadow 0.2s;
-  height: 100%;
   position: relative;
   width: 100%;
   box-sizing: border-box;
@@ -112,7 +118,7 @@ const ChallengeCode = styled.div`
 
 const CardBody = styled.div`
   padding: 16px;
-  flex-grow: 1;
+  flex: 1 1 auto; /* Change from just flex-grow: 1 */
   display: flex;
   flex-direction: column;
   gap: 12px;
