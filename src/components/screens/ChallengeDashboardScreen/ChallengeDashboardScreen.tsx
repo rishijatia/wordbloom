@@ -143,23 +143,28 @@ const ChallengesGrid = styled.div`
   gap: 20px;
   width: 100%;
   box-sizing: border-box;
-  overflow-x: hidden; /* Prevent horizontal overflow */
-  overflow-y: auto; /* Allow vertical scrolling if needed */
-  max-height: calc(100vh - 200px); /* Adjust max height to prevent vertical clipping */
-
+  
+  /* REMOVE fixed height constraint */
+  /* max-height: calc(100vh - 200px); */
+  
+  /* CHANGE overflow behavior */
+  overflow: visible;
+  
   @media (max-width: 767px) {
     max-width: 100%;
     padding: 0;
     > * {
       max-width: 100%;
       min-width: 0;
+      /* ADD min-height to ensure content is fully visible */
+      min-height: 100%;
     }
   }
-
+  
   @media (min-width: 768px) {
     grid-template-columns: repeat(2, 1fr);
   }
-
+  
   @media (min-width: 1440px) {
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     max-width: 1200px;
