@@ -1,6 +1,6 @@
 {
   "challengeDurationMs": 86400000,
   "gameTimeSeconds": 120,
-  "maxPlayers": 10,
+  "maxPlayers": 50,
   "maxChallengesPerDevice": 50
 }
